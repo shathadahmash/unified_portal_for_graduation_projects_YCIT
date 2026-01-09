@@ -1,0 +1,112 @@
+/* ======================
+   صفحة تسجيل الدخول
+========================= */
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #eef3f9;
+  display: block;   /* مهم جداً */
+}
+
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.login-card {
+  background: #ffffff;
+  width: 100%;
+  max-width: 380px;
+  padding: 30px 25px;
+  border-radius: 14px;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.07);
+  text-align: center;
+  direction: rtl;
+}
+
+.login-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #003f85;
+  margin-bottom: 5px;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 25px;
+}
+
+/* Error box */
+.error-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffe5e5;
+  color: #b40000;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-right: 4px solid #ff4d4d;
+}
+
+/* Form */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.input-label {
+  font-weight: 600;
+  color: #333;
+  text-align: right;
+}
+
+.input-field {
+  padding: 12px;
+  border: 1px solid #cfd6e0;
+  border-radius: 8px;
+  font-size: 15px;
+  text-align: right;
+  transition: 0.2s;
+}
+
+.input-field:focus {
+  border-color: #1e68d8;
+  outline: none;
+  box-shadow: 0 0 5px rgba(30, 104, 216, 0.3);
+}
+
+/* Button */
+.login-btn {
+  margin-top: 10px;
+  padding: 12px;
+  background: #1e68d8;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.login-btn:hover {
+  background: #1554ad;
+}
+
+.login-btn:disabled {
+  background: #9abde7;
+  cursor: not-allowed;
+}
+.login-container {
+  width: 100%;
+  max-width: 520px;   
+  padding: 2.5rem;    
+  border-radius: 16px;
+}
