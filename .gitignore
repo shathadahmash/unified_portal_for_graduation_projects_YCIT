@@ -1,0 +1,45 @@
+# ======================
+# Python / Django
+# ======================
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+.env
+.env.*
+venv/
+env/
+ENV/
+.venv/
+pip-wheel-metadata/
+.eggs/
+*.egg-info/
+
+# Django
+/staticfiles/
+media/
+local_settings.py
+
+# ======================
+# React / Node
+# ======================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+build/
+dist/
+
+# ======================
+# OS / Editor
+# ======================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ======================
+# Git
+# ======================
+.git/
