@@ -101,22 +101,94 @@ class Department(models.Model):
         verbose_name_plural = "Departments"
 
 # ==============================================================================
+# class ProgressStage(models.Model):
+#     """
+#     A generic stage definition (e.g., 'Proposal', 'Midterm', 'Final').
+#     This can now be reused across many patterns.
+#     """
+#     name = models.CharField(max_length=255, unique=True,null=True)
+#     description = models.TextField(blank=True, null=True)
+
+#     def __str__(self):
+#         return self.name
+
+# class ProgressPattern(models.Model):
+#     name = models.CharField(max_length=255)
+#     # ... other fields (is_active, colleges, etc.) ...
+
+#     # The Many-to-Many relationship
+#     stages = models.ManyToManyField(
+#         ProgressStage, 
+#         through='PatternStageAssignment',
+#         related_name='patterns'
+#     )
+
+#     def __str__(self):
+#         return self.name
+
+# class PatternStageAssignment(models.Model):
+#     """
+#     The 'Bridge' table that connects Patterns and Stages.
+#     This allows sharing a stage while keeping specific settings for each pattern.
+#     """
+#     pattern = models.ForeignKey(ProgressPattern, on_delete=models.CASCADE)
+#     stage = models.ForeignKey(ProgressStage, on_delete=models.CASCADE)
+    
+#     # Specific settings for THIS pattern
+#     order = models.PositiveIntegerField()
+#     max_mark = models.FloatField(null=True, blank=True)
+
+#     class Meta:
+#         ordering = ['order']
+#         # Ensures a pattern doesn't have the same stage twice 
+#         # and doesn't have two stages with the same order
+#         unique_together = [
+#             ('pattern', 'stage'),
+#             ('pattern', 'order'),
+#         ]
+
+#     def __str__(self):
+#         return f"{self.pattern.name} -> {self.stage.name} (Order: {self.order})"
+
 class ProgressStage(models.Model):
     """
     A generic stage definition (e.g., 'Proposal', 'Midterm', 'Final').
-    This can now be reused across many patterns.
     """
-    name = models.CharField(max_length=255, unique=True,null=True)
+    name = models.CharField(max_length=255, unique=True, null=True)
     description = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.name
 
-class ProgressPattern(models.Model):
-    name = models.CharField(max_length=255)
-    # ... other fields (is_active, colleges, etc.) ...
 
-    # The Many-to-Many relationship
+class ProgressSubStage(models.Model):
+    """
+    Represents a sub-stage within a ProgressStage.
+    Example: Stage = 'Proposal', Sub-stages = 'Initial Draft', 'Peer Review', 'Final Draft'
+    """
+    stage = models.ForeignKey(
+        ProgressStage, 
+        on_delete=models.CASCADE, 
+        related_name='sub_stages'
+    )
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    order = models.PositiveIntegerField(default=0)
+    max_mark = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['order']
+        unique_together = ('stage', 'name')
+
+    def __str__(self):
+        return f"{self.stage.name} -> {self.name} (Order: {self.order})"
+
+
+class ProgressPattern(models.Model):
+    """
+    A pattern of stages for progress tracking.
+    """
+    name = models.CharField(max_length=255)
     stages = models.ManyToManyField(
         ProgressStage, 
         through='PatternStageAssignment',
@@ -126,22 +198,19 @@ class ProgressPattern(models.Model):
     def __str__(self):
         return self.name
 
+
 class PatternStageAssignment(models.Model):
     """
-    The 'Bridge' table that connects Patterns and Stages.
-    This allows sharing a stage while keeping specific settings for each pattern.
+    The 'Bridge' table connecting Patterns and Stages.
+    Also allows assigning specific settings for stages and sub-stages.
     """
     pattern = models.ForeignKey(ProgressPattern, on_delete=models.CASCADE)
     stage = models.ForeignKey(ProgressStage, on_delete=models.CASCADE)
-    
-    # Specific settings for THIS pattern
     order = models.PositiveIntegerField()
     max_mark = models.FloatField(null=True, blank=True)
 
     class Meta:
         ordering = ['order']
-        # Ensures a pattern doesn't have the same stage twice 
-        # and doesn't have two stages with the same order
         unique_together = [
             ('pattern', 'stage'),
             ('pattern', 'order'),
@@ -149,6 +218,35 @@ class PatternStageAssignment(models.Model):
 
     def __str__(self):
         return f"{self.pattern.name} -> {self.stage.name} (Order: {self.order})"
+
+
+class PatternSubStageAssignment(models.Model):
+    """
+    Assign settings to sub-stages for a specific pattern.
+    """
+    pattern_stage_assignment = models.ForeignKey(
+        PatternStageAssignment, 
+        on_delete=models.CASCADE, 
+        related_name='sub_stage_assignments'
+    )
+    sub_stage = models.ForeignKey(
+        ProgressSubStage, 
+        on_delete=models.CASCADE
+    )
+    order = models.PositiveIntegerField()
+    max_mark = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['order']
+        unique_together = [
+            ('pattern_stage_assignment', 'sub_stage'),
+            ('pattern_stage_assignment', 'order'),
+        ]
+
+    def __str__(self):
+        return f"{self.pattern_stage_assignment} -> {self.sub_stage.name} (Order: {self.order})"
+
+
 
 class CollegeProgressPattern(models.Model):
     college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='college_patterns')
