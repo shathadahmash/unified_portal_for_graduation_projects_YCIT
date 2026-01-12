@@ -287,6 +287,35 @@ class Program(models.Model):
     class Meta:
         verbose_name_plural = "Programs"
 
+
+class StudentProgress(models.Model):
+    student = models.ForeignKey('User', on_delete=models.CASCADE, related_name='progress_records')
+    group = models.ForeignKey('Group', on_delete=models.CASCADE, related_name='student_progress')
+    pattern_stage_assignment = models.ForeignKey(
+        'PatternStageAssignment', 
+        on_delete=models.CASCADE, 
+        related_name='student_progress'
+    )
+    sub_stage_assignment = models.ForeignKey(
+        'PatternSubStageAssignment',
+        on_delete=models.CASCADE,
+        related_name='student_progress',
+        blank=True, null=True
+    )
+    score = models.FloatField(blank=True, null=True, help_text="Teacher-assigned score")
+    notes = models.TextField(blank=True, null=True, help_text="Teacher or student notes")
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('student', 'group', 'pattern_stage_assignment', 'sub_stage_assignment')
+        verbose_name_plural = "Student Progress Records"
+
+    def __str__(self):
+        stage_name = self.pattern_stage_assignment.stage.name
+        sub_stage_name = self.sub_stage_assignment.sub_stage.name if self.sub_stage_assignment else "Main Stage"
+        return f"{self.student.name} - {stage_name} ({sub_stage_name})"
+
 # ============================================================================== 
 # 3. نموذج المستخدم المخصص
 # ==============================================================================
