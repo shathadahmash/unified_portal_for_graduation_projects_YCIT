@@ -341,3 +341,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
 class ApprovalSequenceAdmin(admin.ModelAdmin):
     list_display = ('sequence_id', 'sequence_type', 'approval_levels')
     search_fields = ('sequence_type',)
+
+
+
+
