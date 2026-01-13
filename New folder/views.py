@@ -232,14 +232,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project_type = self.request.query_params.get("type")
         if project_type:
             qs = qs.filter(type=project_type)
-        
-        # التحقق من دور الشركة الخارجية
-        is_external = UserRoles.objects.filter(user=user, role__type__icontains='External').exists()
-        
-        if is_external:
-            # عرض المشاريع التي أنشأتها هذه الشركة فقط
-            return qs.filter(created_by=user)
-        
         if PermissionManager.is_student(user) or PermissionManager.is_admin(user):
             return qs
         if PermissionManager.is_supervisor(user):
@@ -277,69 +269,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if not project:
             return Response({'message': 'No project found'}, status=200)
         return Response(ProjectSerializer(project).data)
-
-    @action(detail=False, methods=['post'])
-    def propose(self, request):
-        user = request.user
-        title = request.data.get('title')
-        description = request.data.get('description')
-        
-        if not title or not description:
-            return Response({'error': 'Title and description are required'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            # إنشاء المشروع مع تعيين created_by لضمان المزامنة
-            project = Project.objects.create(
-                title=title,
-                description=description,
-                type='PrivateCompany',
-                state='Pending',
-                created_by=user,
-                start_date=timezone.now().date()
-            )
-            
-            # محاولة إنشاء طلب موافقة تلقائي
-            try:
-                # البحث عن دور رئيس القسم
-                dept_head_role = Role.objects.filter(type__icontains='Department Head').first()
-                if dept_head_role:
-                    dept_head = UserRoles.objects.filter(role=dept_head_role).first()
-                    if dept_head:
-                        ApprovalRequest.objects.create(
-                            approval_type='external_project',
-                            project=project,
-                            requested_by=user,
-                            current_approver=dept_head.user,
-                            status='pending'
-                        )
-            except Exception as e:
-                print(f"Approval request creation failed: {e}")
-
-            serializer = self.get_serializer(project)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            print(f"Project creation failed: {e}")
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=True, methods=['patch', 'put'])
-    def update_project(self, request, pk=None):
-        project = self.get_object()
-        if project.created_by != request.user:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
-        
-        serializer = self.get_serializer(project, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['delete'])
-    def delete_project(self, request, pk=None):
-        project = self.get_object()
-        if project.created_by != request.user:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
-        project.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ============================================================================================
