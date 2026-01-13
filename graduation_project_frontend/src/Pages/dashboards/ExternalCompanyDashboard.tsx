@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/useStore';
 import Layout from '../../components/Layout';
 import { projectService, Project } from '../../services/projectService';
@@ -51,7 +51,7 @@ const ExternalCompanyDashboard: React.FC = () => {
       alert('حدث خطأ أثناء العملية. تأكد من اتصالك بالخادم.');
     }
   };
-
+  // commit from ebtihal
   const handleDelete = async (projectId: number) => {
     if (window.confirm('هل أنت متأكد من حذف هذا المشروع؟')) {
       try {
@@ -82,7 +82,7 @@ const ExternalCompanyDashboard: React.FC = () => {
             <h1 className="text-3xl font-extrabold text-gray-900">مرحباً، {user?.name || user?.username}</h1>
             <p className="text-gray-500 mt-1">لوحة تحكم الشركة الخارجية - إدارة ومتابعة مشاريع التخرج</p>
           </div>
-          <button 
+          <button
             onClick={() => { setEditingProject(null); setFormData({ title: '', description: '', type: 'external' }); setShowForm(true); }}
             className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 font-bold"
           >
@@ -139,8 +139,8 @@ const ExternalCompanyDashboard: React.FC = () => {
                       <tr><td colSpan={4} className="text-center py-10"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div></td></tr>
                     ) : projects.length > 0 ? (
                       projects.map((project) => (
-                        <tr 
-                          key={project.project_id} 
+                        <tr
+                          key={project.project_id}
                           onClick={() => setSelectedProject(project)}
                           className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${selectedProject?.project_id === project.project_id ? 'bg-blue-50/50' : ''}`}
                         >
@@ -161,7 +161,7 @@ const ExternalCompanyDashboard: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 text-sm font-medium">
                             <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                              <button onClick={() => { setEditingProject(project); setFormData({title: project.title, description: project.description, type: project.type}); setShowForm(true); }} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg"><FiEdit2 /></button>
+                              <button onClick={() => { setEditingProject(project); setFormData({ title: project.title, description: project.description, type: project.type }); setShowForm(true); }} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg"><FiEdit2 /></button>
                               <button onClick={() => handleDelete(project.project_id)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg"><FiTrash2 /></button>
                             </div>
                           </td>
@@ -183,17 +183,16 @@ const ExternalCompanyDashboard: React.FC = () => {
             </h3>
             {selectedProject ? (
               <div className="space-y-8 relative before:absolute before:right-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100">
-                {[ 
+                {[
                   { label: 'تقديم المقترح', status: 'completed', desc: `تم البدء في ${selectedProject.start_date || 'اليوم'}` },
                   { label: 'مراجعة القسم', status: selectedProject.state !== 'Pending Approval' ? 'completed' : 'current', desc: 'يتم مراجعة المحتوى العلمي' },
                   { label: 'القرار النهائي', status: selectedProject.state === 'Approved' ? 'completed' : (selectedProject.state === 'Rejected' ? 'failed' : 'pending'), desc: selectedProject.end_date ? `تم الانتهاء في ${selectedProject.end_date}` : 'بانتظار الاعتماد النهائي' }
                 ].map((step, i) => (
                   <div key={i} className="relative pr-10">
-                    <div className={`absolute right-2 top-1 w-4 h-4 rounded-full border-2 bg-white z-10 ${
-                      step.status === 'completed' ? 'border-green-500 bg-green-500' : 
-                      step.status === 'current' ? 'border-blue-500 animate-pulse' : 
-                      step.status === 'failed' ? 'border-red-500 bg-red-500' : 'border-gray-300'
-                    }`} />
+                    <div className={`absolute right-2 top-1 w-4 h-4 rounded-full border-2 bg-white z-10 ${step.status === 'completed' ? 'border-green-500 bg-green-500' :
+                        step.status === 'current' ? 'border-blue-500 animate-pulse' :
+                          step.status === 'failed' ? 'border-red-500 bg-red-500' : 'border-gray-300'
+                      }`} />
                     <p className={`font-bold ${step.status === 'completed' ? 'text-green-700' : step.status === 'current' ? 'text-blue-700' : 'text-gray-500'}`}>{step.label}</p>
                     <p className="text-xs text-gray-400 mt-1">{step.desc}</p>
                   </div>
@@ -223,22 +222,22 @@ const ExternalCompanyDashboard: React.FC = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">عنوان المشروع</label>
-                  <input 
+                  <input
                     type="text" required
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="أدخل عنوان المشروع..."
                     value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">وصف المشروع</label>
-                  <textarea 
+                  <textarea
                     required rows={5}
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="اشرح فكرة المشروع..."
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
