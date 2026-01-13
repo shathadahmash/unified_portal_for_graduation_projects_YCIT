@@ -9,19 +9,19 @@ const ProjectTypeSelect = () => {
       id: "private",
       title: "مشروع خاص",
       description: "قم بإضافة فكرة مشروعك الخاص وتقديمه للمراجعة",
-      color: "bg-blue-50 border-blue-400",
+      color: "chip-blue",
     },
     {
       id: "government",
       title: "مشاريع حكومية",
       description: "تصفح المشاريع الحكومية المتاحة للاختيار",
-      color: "bg-green-50 border-green-400",
+      color: "chip-blue",
     },
     {
       id: "external",
       title: "شركات خارجية",
       description: "مشاريع مقدمة من الشركات الخاصة",
-      color: "bg-yellow-50 border-yellow-400",
+      color: "chip-blue",
     },
   ];
 
@@ -39,7 +39,7 @@ const ProjectTypeSelect = () => {
           <div
             key={item.id}
             onClick={() => openPage(item.id)}
-            className={`cursor-pointer border-2 rounded-xl p-6 shadow hover:shadow-lg transition ${item.color}`}
+            className={`cursor-pointer border-2 rounded-xl p-6 shadow hover:shadow-lg transition ${item.color} theme-card`}
           >
             <h2 className="text-xl font-bold mb-2">{item.title}</h2>
             <p className="text-gray-600">{item.description}</p>

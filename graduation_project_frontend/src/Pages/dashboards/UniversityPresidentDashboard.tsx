@@ -17,21 +17,21 @@ const UniversityPresidentDashboard: React.FC = () => {
 
         {/* بطاقات إحصائية */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-6 rounded-lg shadow border-r-4 border-yellow-500">
-            <p className="text-gray-600 text-sm">موافقات معلقة</p>
-            <p className="text-3xl font-bold">{pendingApprovals.length}</p>
+          <div className="p-6 theme-card">
+            <p className="text-sm text-slate-600">موافقات معلقة</p>
+            <p className="text-3xl font-bold text-slate-800">{pendingApprovals.length}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow border-r-4 border-green-500">
-            <p className="text-gray-600 text-sm">الجامعات</p>
-            <p className="text-3xl font-bold">1</p>
+          <div className="p-6 theme-card">
+            <p className="text-sm text-slate-600">الجامعات</p>
+            <p className="text-3xl font-bold text-slate-800">1</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow border-r-4 border-blue-500">
-            <p className="text-gray-600 text-sm">الكليات</p>
-            <p className="text-3xl font-bold">8</p>
+          <div className="p-6 theme-card">
+            <p className="text-sm text-slate-600">الكليات</p>
+            <p className="text-3xl font-bold text-slate-800">8</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow border-r-4 border-purple-500">
-            <p className="text-gray-600 text-sm">المشاريع</p>
-            <p className="text-3xl font-bold">156</p>
+          <div className="p-6 theme-card">
+            <p className="text-sm text-slate-600">المشاريع</p>
+            <p className="text-3xl font-bold text-slate-800">156</p>
           </div>
         </div>
 
@@ -54,12 +54,12 @@ const UniversityPresidentDashboard: React.FC = () => {
             <div className="space-y-4">
               {pendingApprovals.length > 0 ? (
                 pendingApprovals.map((approval) => (
-                  <div key={approval.approval_id} className="bg-white p-6 rounded-lg shadow border-l-4 border-yellow-500">
-                    <p className="font-bold">{approval.approval_type}</p>
-                    <p className="text-sm text-gray-600 mt-1">من: {approval.requested_by.name}</p>
+                  <div key={approval.approval_id} className="p-6 theme-card">
+                    <p className="font-bold text-slate-800">{approval.approval_type}</p>
+                    <p className="text-sm text-slate-600 mt-1">من: {approval.requested_by.name}</p>
                     <div className="flex gap-2 mt-4">
-                      <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">موافقة</button>
-                      <button className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">رفض</button>
+                      <button className="btn-blue">موافقة</button>
+                      <button className="btn-outline-blue">رفض</button>
                     </div>
                   </div>
                 ))

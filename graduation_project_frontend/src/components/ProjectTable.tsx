@@ -14,24 +14,19 @@ const ProjectsTable: React.FC = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       setLoading(true);
+      console.log('[ProjectsTable] fetchProjects called (bulk)');
       try {
-        const fetchedProjects = await projectService.getProject();
-        
-        // Optional: fetch users for each project (if available)
-        // Here assuming each project has a users array or we map manually
-        const projectsWithUsers: ProjectWithUsers[] = await Promise.all(
-          fetchedProjects.map(async (proj: any) => {
-            // Example: get all users and filter by project id if API allows
-            // If your project API includes users directly, you can skip this
-            const allUsers: User[] = await userService.getAllUsers();
-            const projectUsers = allUsers.filter(u => u.roles.some(r => r.type === proj.type));
-            return { ...proj, users: projectUsers };
-          })
-        );
+        const bulk = await projectService.getProjectsWithGroups();
+        console.log('[ProjectsTable] bulk fetched:', bulk);
+        const fetched = Array.isArray(bulk.projects) ? bulk.projects : [];
 
+        // Handle paginated responses or wrapped data
+        let items: any[] = fetched;
+        console.log('[ProjectsTable] normalized items length:', items.length);
+        const projectsWithUsers: ProjectWithUsers[] = items.map((p: any) => ({ ...p, users: p.users || [] }));
         setProjects(projectsWithUsers);
       } catch (err) {
-        console.error('Failed to fetch projects:', err);
+        console.error('[ProjectsTable] Failed to fetch projects:', err);
       } finally {
         setLoading(false);
       }
@@ -47,7 +42,7 @@ const ProjectsTable: React.FC = () => {
   return (
     <div className="p-6 overflow-x-auto">
       <table className="min-w-full bg-white rounded-xl shadow">
-        <thead className="bg-gray-100 text-gray-700">
+        <thead className="table-header-blue text-primary">
           <tr>
             <th className="px-4 py-2 text-right">عنوان المشروع</th>
             <th className="px-4 py-2 text-right">نوع المشروع</th>
@@ -75,7 +70,7 @@ const ProjectsTable: React.FC = () => {
               </td>
               <td className="px-4 py-2 text-center">
                 <button
-                  className="text-blue-600 hover:text-blue-800 flex items-center justify-center gap-1"
+                  className="text-primary-700 hover:opacity-80 flex items-center justify-center gap-1"
                   onClick={() => projectService.downloadProjectFile(proj.project_id)}
                 >
                   <FiDownload /> تنزيل

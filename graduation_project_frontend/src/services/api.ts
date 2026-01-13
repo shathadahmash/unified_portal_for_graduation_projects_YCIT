@@ -12,6 +12,18 @@ const api = axios.create({
   },
 });
 
+// Log outgoing requests for debugging (URL, method, Authorization header)
+api.interceptors.request.use((config) => {
+  try {
+    const auth = config.headers?.Authorization || api.defaults.headers.common["Authorization"];
+    // eslint-disable-next-line no-console
+    console.log('[api] request ->', (config.method || 'GET').toUpperCase(), config.url, 'params:', config.params || null, 'auth:', auth ? 'present' : 'missing');
+  } catch (e) {
+    // ignore
+  }
+  return config;
+});
+
 /* =======================
    Load Token on Startup
 ======================= */
@@ -52,7 +64,14 @@ api.interceptors.response.use(
     try {
       const resp = err.response;
       if (resp) {
-        console.error('[API ERROR]', resp.status, resp.config.method?.toUpperCase(), resp.config.url, resp.data);
+        // Log richer response info for debugging
+        console.error('[API ERROR]', {
+          status: resp.status,
+          method: resp.config.method?.toUpperCase(),
+          url: resp.config.url,
+          data: resp.data,
+          headers: resp.headers,
+        });
         if (resp.status === 500) {
           // show a concise message so the user can copy-paste server error
           const msg = resp.data && typeof resp.data === 'object' ? JSON.stringify(resp.data) : String(resp.data);
@@ -79,7 +98,8 @@ export const API_ENDPOINTS = {
   SUPERVISORS: "supervisors/",
   CO_SUPERVISORS: "co-supervisors/",
   STATISTICS: "statistics/",
-  PROGRAMS: "programs/", // <- add this
+  PROGRAMS: "programs/",
+  PROJECTS: "projects/", // <- add this
 };
 
 /* =======================
@@ -92,7 +112,7 @@ export const ROLES = {
   DEAN: "dean",
   DEPARTMENT_HEAD: "department head",
   SYSTEM_MANAGER: "system manager",
-  EXTERNAL_COMPANY: "external_company",
+  EXTERNAL_COMPANY: "external company",
 };
 
 /* =======================

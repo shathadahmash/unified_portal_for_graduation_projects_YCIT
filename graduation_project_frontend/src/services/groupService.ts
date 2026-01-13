@@ -80,6 +80,12 @@ export const groupService = {
     return response.data;
   },
 
+  async getGroupsFields(fields?: string[]) {
+    const { fetchTableFields } = await import('./bulkService');
+    const rows = await fetchTableFields('groups', fields);
+    return rows;
+  },
+
   async getGroupById(groupId: number) {
     const response = await api.get(`/groups/${groupId}/`);
     return response.data;

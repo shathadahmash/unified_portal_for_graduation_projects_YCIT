@@ -6,27 +6,36 @@ import { FiPlus, FiEdit2, FiTrash2, FiClock, FiCheckCircle, FiActivity, FiInfo, 
 
 const ExternalCompanyDashboard: React.FC = () => {
   const { user } = useAuthStore();
+  console.log('[ExternalCompanyDashboard] render, user:', user);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [formData, setFormData] = useState({ title: '', description: '', type: 'external' });
+  const [formData, setFormData] = useState({ title: '', description: '', type: 'PrivateCompany' });
 
   useEffect(() => {
+    console.log('[ExternalCompanyDashboard] useEffect mount - fetching projects');
     fetchProjects();
   }, []);
 
   const fetchProjects = async () => {
+    console.log('[ExternalCompanyDashboard] fetchProjects called');
     setLoading(true);
     try {
-      const data = await projectService.getProjects(); // already uses trailing slash in service
-      setProjects(Array.isArray(data) ? data : []);
-      if (Array.isArray(data) && data.length > 0 && !selectedProject) {
-        setSelectedProject(data[0]);
+      console.log('[ExternalCompanyDashboard] requesting projects+groups via bulk');
+      const data = await projectService.getProjectsWithGroups(['project_id', 'title', 'type', 'state', 'start_date']);
+      console.log('[ExternalCompanyDashboard] bulk data received:', data);
+      // data.projects and data.groups
+      const projectsData = Array.isArray(data.projects) ? data.projects : [];
+      console.log('[ExternalCompanyDashboard] projectsData.length =', projectsData.length);
+      setProjects(projectsData as any[]);
+      if (projectsData.length > 0 && !selectedProject) {
+        setSelectedProject(projectsData[0]);
+        console.log('[ExternalCompanyDashboard] Selected Project:', projectsData[0]);
       }
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      console.error('[ExternalCompanyDashboard] Error fetching projects:', error);
       alert('فشل تحميل المشاريع. تحقق من اتصالك بالخادم.');
       setProjects([]);
     } finally {
@@ -37,10 +46,11 @@ const ExternalCompanyDashboard: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      console.log('[ExternalCompanyDashboard] handleSubmit, editingProject:', editingProject, 'formData:', formData);
       if (editingProject) {
         await projectService.updateProject(editingProject.project_id, formData);
       } else {
-        await projectService.proposeProject(formData); // already uses /projects/ in service
+        await projectService.proposeProject(formData);
       }
       setShowForm(false);
       setEditingProject(null);
@@ -48,7 +58,9 @@ const ExternalCompanyDashboard: React.FC = () => {
       fetchProjects();
     } catch (error) {
       console.error('Failed to submit project:', error);
-      alert('حدث خطأ أثناء العملية. تأكد من اتصالك بالخادم.');
+      // show server error if available
+      const msg = (error as any)?.response?.data || (error as any)?.message || 'حدث خطأ أثناء العملية. تأكد من اتصالك بالخادم.';
+      alert(typeof msg === 'string' ? msg : JSON.stringify(msg));
     }
   };
   // commit from ebtihal
@@ -75,7 +87,7 @@ const ExternalCompanyDashboard: React.FC = () => {
 
   return (
     <Layout>
-      <div className="p-6 max-w-7xl mx-auto space-y-8 bg-gray-50 min-h-screen">
+      <div className="p-6 max-w-7xl mx-auto space-y-8 bg-[#F8FAFC] min-h-screen">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div>
@@ -93,22 +105,22 @@ const ExternalCompanyDashboard: React.FC = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-blue-500 flex items-center gap-4">
-            <div className="p-3 bg-blue-50 rounded-xl text-blue-600"><FiActivity className="w-8 h-8" /></div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-transparent flex items-center gap-4">
+            <div className="p-3 chip-blue rounded-xl"><FiActivity className="w-8 h-8 text-current" /></div>
             <div>
               <p className="text-gray-500 text-sm font-medium">إجمالي المقترحات</p>
               <p className="text-3xl font-bold text-gray-900">{projects.length}</p>
             </div>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-green-500 flex items-center gap-4">
-            <div className="p-3 bg-green-50 rounded-xl text-green-600"><FiCheckCircle className="w-8 h-8" /></div>
+            <div className="p-3 chip-blue rounded-xl"><FiCheckCircle className="w-8 h-8 text-current" /></div>
             <div>
               <p className="text-gray-500 text-sm font-medium">المشاريع المعتمدة</p>
               <p className="text-3xl font-bold text-gray-900">{projects.filter(p => p.state === 'Approved').length}</p>
             </div>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-purple-500 flex items-center gap-4">
-            <div className="p-3 bg-purple-50 rounded-xl text-purple-600"><FiClock className="w-8 h-8" /></div>
+            <div className="p-3 chip-blue rounded-xl"><FiClock className="w-8 h-8 text-current" /></div>
             <div>
               <p className="text-gray-500 text-sm font-medium">قيد المراجعة</p>
               <p className="text-3xl font-bold text-gray-900">{projects.filter(p => p.state === 'Pending Approval').length}</p>

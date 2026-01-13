@@ -67,12 +67,12 @@ const ProjectSelectionPage: React.FC = () => {
   // شاشة النجاح
   if (projectLinked) return (
     <div className="flex flex-col items-center justify-center py-32 text-center animate-in fade-in zoom-in duration-500">
-      <div className="w-24 h-24 bg-blue-600 text-white rounded-full flex items-center justify-center mb-6 shadow-xl shadow-blue-200">
+      <div className="w-24 h-24 icon-circle text-white rounded-full flex items-center justify-center mb-6 shadow-xl">
         <FiCheckCircle size={48} />
       </div>
-      <h2 className="text-3xl font-black text-blue-900 tracking-tighter">تم اختيار المشروع بنجاح!</h2>
-      <p className="text-blue-600/70 mt-2 mb-8 font-medium text-lg">أصبح المشروع الآن مرتبطاً بمجموعتكم الرسمية.</p>
-      <button onClick={() => window.location.reload()} className="px-10 py-4 bg-blue-900 text-white rounded-2xl font-black transition-all hover:bg-black">العودة للرئيسية</button>
+      <h2 className="text-3xl font-black text-primary-700 tracking-tighter">تم اختيار المشروع بنجاح!</h2>
+      <p className="text-slate-500 mt-2 mb-8 font-medium text-lg">أصبح المشروع الآن مرتبطاً بمجموعتكم الرسمية.</p>
+      <button onClick={() => window.location.reload()} className="px-10 py-4 btn-blue rounded-2xl font-black transition-all">العودة للرئيسية</button>
     </div>
   );
 
@@ -80,14 +80,14 @@ const ProjectSelectionPage: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 py-10" dir="rtl">
       
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-16 gap-8 border-b border-blue-50 pb-12">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-16 gap-8 border-b primary-decor pb-12">
         <div className="text-right">
-          <h1 className="text-4xl font-black text-blue-950 tracking-tighter">بوابة المشاريع</h1>
-          <p className="text-blue-600 font-medium mt-2 italic">اختر المسار الأمثل لمشروع تخرجك من القائمة أدناه</p>
+          <h1 className="text-4xl font-black text-primary-700 tracking-tighter">بوابة المشاريع</h1>
+          <p className="text-slate-500 font-medium mt-2 italic">اختر المسار الأمثل لمشروع تخرجك من القائمة أدناه</p>
         </div>
 
         {/* التبديل بين الأقسام - تدرجات زرقاء */}
-        <div className="flex p-1.5 bg-blue-50/50 rounded-2xl border border-blue-100 shadow-inner">
+        <div className="flex p-1.5 primary-decor rounded-2xl border shadow-inner">
           {[
             { id: 'Government', label: 'حكومي', icon: <FiGlobe /> },
             { id: 'PrivateCompany', label: 'شركات', icon: <FiBriefcase /> },
@@ -96,8 +96,7 @@ const ProjectSelectionPage: React.FC = () => {
             <button
               key={opt.id}
               onClick={() => setSelectedOption(opt.id as any)}
-              className={`flex items-center gap-2 px-8 py-3 rounded-xl font-black text-sm transition-all duration-300
-                ${selectedOption === opt.id ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-400 hover:text-blue-700'}`}
+              className={`flex items-center gap-2 px-8 py-3 rounded-xl font-black text-sm transition-all duration-300 ${selectedOption === opt.id ? 'btn-blue shadow-lg' : 'chip-blue'}`}
             >
               {opt.icon} {opt.label}
             </button>
@@ -120,44 +119,43 @@ const ProjectSelectionPage: React.FC = () => {
 
             // منطق الألوان والنصوص الموحد (تدرجات الأزرق)
             let btnText = "اختيار المشروع";
-            let btnStyle = "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200";
+            let btnStyle = "btn-blue";
             let btnDisabled = false;
             let btnIcon = <FiArrowLeft />;
 
             if (!isUserInGroup) {
               btnText = "يجب الانضمام لمجموعة";
-              btnStyle = "bg-blue-100 text-blue-900 border border-blue-200 hover:bg-blue-200";
-              btnIcon = <FiUsers className="text-blue-600" />;
+              btnStyle = "btn-outline-blue";
+              btnIcon = <FiUsers className="text-primary-700" />;
             } else if (alreadyHasProject) {
               btnText = "لديك مشروع حالي";
-              btnStyle = "bg-blue-50 text-blue-300 border border-blue-100 cursor-not-allowed";
+              btnStyle = "bg-slate-50 text-slate-400 border border-slate-100 cursor-not-allowed";
               btnDisabled = true;
               btnIcon = <FiLock />;
             } else if (!isProjectAvailable) {
               btnText = "مشروع محجوز";
-              btnStyle = "bg-slate-50 text-blue-800 border border-blue-100 cursor-not-allowed opacity-70";
+              btnStyle = "bg-slate-50 text-slate-500 border border-slate-100 cursor-not-allowed opacity-70";
               btnDisabled = true;
-              btnIcon = <FiAlertCircle className="text-blue-400" />;
+              btnIcon = <FiAlertCircle className="text-slate-400" />;
             }
 
             return (
-              <div key={p.project_id} className="group bg-white border border-blue-50 rounded-[3rem] p-8 shadow-sm hover:shadow-2xl hover:border-blue-200 transition-all duration-500 flex flex-col hover:-translate-y-2">
+              <div key={p.project_id} className="group bg-white border rounded-[3rem] p-8 shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col hover:-translate-y-2">
                 <div className="flex justify-between items-start mb-8">
-                  <div className="p-4 bg-blue-50 text-blue-600 rounded-3xl group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+                  <div className="p-4 primary-decor text-primary-700 rounded-3xl transition-all duration-500">
                     <FiBriefcase size={24} />
                   </div>
-                  <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border tracking-tighter
-                    ${isProjectAvailable ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-blue-400 border-blue-100'}`}>
+                  <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border tracking-tighter ${isProjectAvailable ? 'chip-blue' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
                     {isProjectAvailable ? 'متاح للارتباط' : 'مرتبط بمجموعة'}
                   </span>
                 </div>
 
-                <h3 className="text-xl font-black text-blue-950 mb-4 leading-snug min-h-[3.5rem] tracking-tight">{p.title}</h3>
-                <p className="text-blue-600/60 text-sm leading-relaxed mb-10 line-clamp-3 italic">"{p.description}"</p>
+                <h3 className="text-xl font-black text-primary-700 mb-4 leading-snug min-h-[3.5rem] tracking-tight">{p.title}</h3>
+                <p className="text-slate-500 text-sm leading-relaxed mb-10 line-clamp-3 italic">"{p.description}"</p>
                 
-                <div className="mt-auto pt-8 border-t border-blue-50/50">
-                  <div className="flex items-center gap-3 text-xs font-bold text-blue-400 mb-6">
-                    <span className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">🎓</span>
+                <div className="mt-auto pt-8 border-t">
+                  <div className="flex items-center gap-3 text-xs font-bold text-slate-500 mb-6">
+                    <span className="w-8 h-8 rounded-full primary-decor flex items-center justify-center text-primary-700">🎓</span>
                     <span>المشرف: {p.supervisor?.name || 'قيد التعيين'}</span>
                   </div>
 

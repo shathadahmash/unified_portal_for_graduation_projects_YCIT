@@ -161,7 +161,7 @@ const SystemManagerDashboard: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] font-sans" dir="rtl">
+    <div className="flex h-screen bg-[#F8FAFC] font-sans system-manager-theme" dir="rtl">
       {/* Sidebar Overlay */}
       <div
         className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity duration-300 ${
@@ -259,7 +259,7 @@ const SystemManagerDashboard: React.FC = () => {
             >
               <FiBell size={20} />
               {unreadCount > 0 && (
-                <span className="absolute top-2 right-2 w-4 h-4 bg-rose-500 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-white">
+                <span className="absolute top-2 right-2 w-4 h-4 badge-blue text-[10px] font-black flex items-center justify-center rounded-full border-2 border-white">
                   {unreadCount}
                 </span>
               )}
@@ -282,16 +282,15 @@ const SystemManagerDashboard: React.FC = () => {
           {activeTab === 'home' && (
             <div className="max-w-7xl mx-auto space-y-10">
               {/* Welcome Section */}
-              <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-700 rounded-[2.5rem] p-10 text-white shadow-2xl shadow-blue-200">
+              <div className="relative overflow-hidden hero-blue p-10 shadow-2xl">
                 <div className="relative z-10">
                   <h1 className="text-3xl font-black mb-3">مرحباً بك مجدداً، مدير النظام 👋</h1>
-                  <p className="text-blue-100 max-w-xl leading-relaxed font-medium">
+                  <p className="max-w-xl leading-relaxed font-medium text-white/90">
                     إليك نظرة سريعة على حالة النظام اليوم. يمكنك إدارة المستخدمين، المشاريع، والمجموعات من خلال البطاقات أدناه.
                   </p>
                 </div>
-                {/* Decorative circles */}
                 <div className="absolute top-[-20%] left-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-[-20%] right-[-5%] w-48 h-48 bg-blue-400/20 rounded-full blur-2xl"></div>
+                <div className="absolute bottom-[-20%] right-[-5%] w-48 h-48 bg-primary-decor rounded-full blur-2xl"></div>
               </div>
 
               {/* Stats Grid */}
@@ -304,21 +303,21 @@ const SystemManagerDashboard: React.FC = () => {
                       setShowManagementContent(false);
                       setActiveReport(null);
                     }}
-                    className={`group bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-${card.color}-100 transition-all duration-300 cursor-pointer relative overflow-hidden`}
+                    className={`group theme-card p-6 rounded-[1.5rem] shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer relative overflow-hidden`}
                   >
                     <div className="flex flex-col h-full relative z-10">
-                      <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${card.gradient} text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 mb-6`}>
-                        {React.cloneElement(card.icon as React.ReactElement, { size: 24 })}
+                      <div className="w-14 h-14 rounded-2xl icon-circle flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-105">
+                        {React.cloneElement(card.icon as React.ReactElement, { size: 20 })}
                       </div>
                       <h3 className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1">{card.title}</h3>
                       <div className="flex items-baseline gap-2">
                         <span className="text-3xl font-black text-slate-800">{card.value}</span>
-                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">+12%</span>
+                        <span className="chip-blue text-sm ml-2">نظرة</span>
                       </div>
                       <p className="text-slate-400 text-[11px] mt-4 font-medium leading-tight">{card.description}</p>
                     </div>
                     {/* Hover background decoration */}
-                    <div className={`absolute -bottom-6 -left-6 w-24 h-24 bg-${card.color}-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+                    <div style={{ background: 'var(--primary-blue-50)' }} className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   </div>
                 ))}
               </div>
@@ -328,9 +327,9 @@ const SystemManagerDashboard: React.FC = () => {
                 <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm animate-in fade-in zoom-in-95 duration-500">
                   <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-600">
-                        <FiActivity size={24} />
-                      </div>
+                      <div className="w-12 h-12 theme-card rounded-2xl flex items-center justify-center text-slate-600">
+                          <FiActivity size={24} />
+                        </div>
                       <div>
                         <h3 className="text-2xl font-black text-slate-800">{activeCardPanel}</h3>
                         <p className="text-slate-400 text-sm font-medium">اختر الإجراء المطلوب تنفيذه</p>
@@ -351,14 +350,14 @@ const SystemManagerDashboard: React.FC = () => {
                         setActiveReport(null);
                       }}
                       className={`group relative overflow-hidden p-8 rounded-3xl border-2 transition-all duration-300 text-right ${
-                        showManagementContent 
-                          ? 'border-blue-600 bg-blue-50/30' 
-                          : 'border-slate-100 hover:border-blue-200 hover:bg-slate-50'
-                      }`}
+                          showManagementContent 
+                            ? 'border-transparent bg-primary-decor/30' 
+                            : 'border-slate-100 hover:border-primary-decor hover:bg-primary-decor/10'
+                        }`}
                     >
                       <div className="flex items-center gap-4 mb-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                          showManagementContent ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600'
+                          showManagementContent ? 'icon-circle' : 'chip-blue'
                         }`}>
                           <FiSettings size={24} />
                         </div>
@@ -379,18 +378,18 @@ const SystemManagerDashboard: React.FC = () => {
                         setShowManagementContent(false);
                       }}
                       className={`group relative overflow-hidden p-8 rounded-3xl border-2 transition-all duration-300 text-right ${
-                        activeReport 
-                          ? 'border-indigo-600 bg-indigo-50/30' 
-                          : 'border-slate-100 hover:border-indigo-200 hover:bg-slate-50'
-                      }`}
+                          activeReport 
+                            ? 'border-transparent bg-primary-decor/30' 
+                            : 'border-slate-100 hover:border-primary-decor hover:bg-primary-decor/10'
+                        }`}
                     >
                       <div className="flex items-center gap-4 mb-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                          activeReport ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'
+                          activeReport ? 'icon-circle' : 'chip-blue'
                         }`}>
                           <FiPieChart size={24} />
                         </div>
-                        <span className={`text-lg font-black ${activeReport ? 'text-indigo-700' : 'text-slate-800'}`}>
+                        <span className={`text-lg font-black ${activeReport ? 'text-primary-700' : 'text-slate-800'}`}>
                           عرض التقارير
                         </span>
                       </div>
