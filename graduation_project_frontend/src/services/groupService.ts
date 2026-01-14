@@ -68,13 +68,13 @@ export const groupService = {
     const res = await api.post('/groups/', payload);
     return res.data;
   },
+  //fatima added this group creation since the supervisor group creation is different from the student
   // --- إنشاء مجموعة كمشرف (إنشاء مباشر) ---
   async createGroupAsSupervisor(payload: GroupCreatePayload): Promise<any> {
   // نفس endpoint /groups/ لكن نرسل flag يخلي الباكند يعرف أنه إنشاء مباشر
     const res = await api.post('/groups/', { ...payload, created_by_role: 'supervisor' });
     return res.data;
-  },
-
+  },//till here
   async linkProjectToGroup(groupId: number, projectId: number) {
     const res = await api.post(`/groups/${groupId}/link-project/`, { project_id: projectId });
     return res.data;
