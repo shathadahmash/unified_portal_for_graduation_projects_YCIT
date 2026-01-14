@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { userService, User } from '../services/userService';
+import { exportToCSV } from './tableUtils';
+import { containerClass, tableWrapperClass, tableClass, theadClass } from './tableStyles';
 
 const SupervisorsTable: React.FC = () => {
   const [supervisors, setSupervisors] = useState<User[]>([]);
@@ -239,7 +241,7 @@ const SupervisorsTable: React.FC = () => {
 
   if (supervisors.length === 0) return <div className="p-4 text-center text-gray-500">لا يوجد مشرفون</div>;
   return (
-    <div className="theme-card p-4 overflow-x-auto">
+    <div className={containerClass}>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
         <div>
           <h3 className="text-lg font-semibold">المشرفين</h3>
@@ -254,12 +256,14 @@ const SupervisorsTable: React.FC = () => {
               <option key={r.id} value={r.id}>{r.type}</option>
             ))}
           </select>
+          <button onClick={() => exportToCSV('supervisors.csv', filteredSupervisors)} className="bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600">تصدير</button>
           <button className="btn-blue" onClick={handleCreate}>إضافة مشرف</button>
         </div>
       </div>
 
-      <table className="w-full border-collapse text-center">
-        <thead className="table-header-blue text-primary-700">
+      <div className={tableWrapperClass}>
+        <table className={tableClass}>
+          <thead className={theadClass}>
           <tr>
             <th className="p-2 border">#</th>
             <th className="p-2 border text-right">الاسم</th>
@@ -377,6 +381,7 @@ const SupervisorsTable: React.FC = () => {
         </div>
       )}
     </div>
+  </div>
   );
 };
 

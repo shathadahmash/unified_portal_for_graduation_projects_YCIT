@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { userService, User, Role } from "../services/userService";
+import { exportToCSV } from './tableUtils';
+import { containerClass, tableWrapperClass, tableClass, theadClass } from './tableStyles';
 import { 
   FiSearch, 
   FiFilter, 
@@ -202,22 +204,25 @@ const UsersTable: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className={containerClass}>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-800">إدارة المستخدمين</h1>
           <p className="text-slate-500 mt-1">عرض وتعديل بيانات المستخدمين في النظام</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingUser(null);
-            setShowCreateForm(!showCreateForm);
-          }}
-          className="bg-indigo-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all font-bold flex items-center gap-2"
-        >
-          {showCreateForm ? <FiX /> : <FiUser />}
-          {showCreateForm ? "إلغاء" : "إضافة مستخدم جديد"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => exportToCSV('users.csv', filteredUsers)} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">تصدير</button>
+          <button
+            onClick={() => {
+              setEditingUser(null);
+              setShowCreateForm(!showCreateForm);
+            }}
+            className="bg-indigo-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all font-bold flex items-center gap-2"
+          >
+            {showCreateForm ? <FiX /> : <FiUser />}
+            {showCreateForm ? "إلغاء" : "إضافة مستخدم جديد"}
+          </button>
+        </div>
       </div>
 
       {/* Filters Section */}
@@ -382,8 +387,8 @@ const UsersTable: React.FC = () => {
 
       {/* Table Section */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right">
+        <div className={tableWrapperClass}>
+          <table className={tableClass + ' text-right'}>
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">المستخدم</th>

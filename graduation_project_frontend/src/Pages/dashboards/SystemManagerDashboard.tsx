@@ -28,6 +28,7 @@ import GroupsTable from '../../components/GroupsTable';
 import UsersReport from '../../components/UsersReport';
 import ProjectReport from '../../components/ProjectReport';
 import GroupsReport from '../../components/GroupsReport';
+import ProjectsTable from '../../components/ProjectTable';
 
 const SystemManagerDashboard: React.FC = () => {
   const { unreadCount } = useNotificationsStore();
@@ -131,14 +132,8 @@ const SystemManagerDashboard: React.FC = () => {
         {activeCardPanel === 'الأدوار' && <RolesTable />}
         {activeCardPanel === 'المجموعات' && <GroupsTable />}
         {activeCardPanel === 'المشاريع' && (
-          <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-100 text-center">
-            <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FiLayers size={40} />
-            </div>
-            <h4 className="text-xl font-black text-slate-800 mb-2">إدارة المشاريع</h4>
-            <p className="text-slate-500 max-w-md mx-auto">
-              لإدارة المشاريع وتفاصيلها، يرجى استخدام قسم "التقارير" المخصص للمشاريع.
-            </p>
+          <div className="mt-6">
+            <ProjectsTable />
           </div>
         )}
       </div>

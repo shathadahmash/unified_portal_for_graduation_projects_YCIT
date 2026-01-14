@@ -211,7 +211,8 @@ class GroupMembersViewSet(viewsets.ReadOnlyModelViewSet):
 
 class ProjectFilter(django_filters.FilterSet):
     college = django_filters.NumberFilter(field_name="college__cid")
-    supervisor = django_filters.NumberFilter(field_name="group__groupsupervisors__user__id")
+    # Project -> Group(s) (related_name='groups') -> GroupSupervisors -> user
+    supervisor = django_filters.NumberFilter(field_name="groups__groupsupervisors__user__id")
     year = django_filters.NumberFilter(field_name="start_date__year")
 
     class Meta:
@@ -498,6 +499,8 @@ def bulk_fetch(request):
     mapping = {
         'projects': Project,
         'groups': Group,
+        'group_members': GroupMembers,
+        'group_supervisors': GroupSupervisors,
         'users': User,
         'academic_affiliations': AcademicAffiliation,
         'colleges': College,

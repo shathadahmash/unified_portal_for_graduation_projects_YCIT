@@ -179,6 +179,7 @@ import {
   FiTrash2,
   FiEdit3
 } from "react-icons/fi";
+import { containerClass, tableWrapperClass, tableClass, theadClass } from './tableStyles';
 
 interface Group {
   group_id: number;
@@ -260,18 +261,26 @@ const GroupsTable: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen" dir="rtl">
+    <div className={containerClass} dir="rtl">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-800">إدارة المجموعات</h1>
           <p className="text-slate-500 mt-1">تنظيم ومتابعة المجموعات الأكاديمية والمشاريع المرتبطة بها</p>
         </div>
-        <button
-          className="bg-purple-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all font-bold flex items-center gap-2"
-        >
-          <FiPlus />
-          <span>إنشاء مجموعة جديدة</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => exportToCSV('groups.csv', filteredGroups)}
+            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-semibold"
+          >
+            تصدير
+          </button>
+          <button
+            className="bg-purple-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all font-bold flex items-center gap-2"
+          >
+            <FiPlus />
+            <span>إنشاء مجموعة جديدة</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters Section */}
@@ -334,8 +343,8 @@ const GroupsTable: React.FC = () => {
 
       {/* Table Section */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right">
+        <div className={tableWrapperClass}>
+          <table className={tableClass + ' text-right'}>
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">المجموعة</th>

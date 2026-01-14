@@ -18,9 +18,10 @@ code {
 
 :root {
   --primary-blue: #0E4C92; /* homepage primary blue */
-  --primary-blue-700: #0b3a6c;
-  --primary-blue-50: rgba(14,76,146,0.06);
-  --muted-blue: rgba(14,76,146,0.12);
+  --primary-blue-700: #1554ad;
+  --primary-blue-50: rgba(21,84,173,0.06);
+  --muted-blue: rgba(21,84,173,0.12);
+  --table-primary: #1554ad;
 }
 
 /* System Manager specific theme: override primary blue to #1e68d8 */
@@ -64,6 +65,35 @@ code {
   background: var(--primary-blue);
   color: white;
   padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+}
+
+/* Global table styling to standardize across components */
+table {
+  border-collapse: collapse;
+}
+
+table thead {
+  background: var(--table-primary) !important;
+  color: #fff !important;
+}
+
+table thead th {
+  color: #fff !important;
+  font-weight: 700;
+  padding: 0.6rem 0.75rem;
+  text-align: right;
+}
+
+table tbody tr:hover {
+  background: rgba(21,84,173,0.04);
+}
+
+/* Export button style to match tables */
+.table-export {
+  background: var(--table-primary);
+  color: #fff;
+  padding: 0.35rem 0.6rem;
   border-radius: 0.5rem;
 }
 

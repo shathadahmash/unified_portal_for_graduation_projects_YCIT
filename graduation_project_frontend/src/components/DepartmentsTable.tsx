@@ -273,6 +273,7 @@
 // export default DepartmentTable;
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import { exportToCSV } from './tableUtils';
 
 interface College {
   cid: number;
@@ -362,7 +363,13 @@ const DepartmentTable: React.FC = () => {
       <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">إدارة الاقسام</h2>
 
       {/* Add Department Button */}
-      <div className="mb-4 text-right">
+      <div className="mb-4 text-right flex items-center justify-end gap-2">
+        <button
+          onClick={() => exportToCSV('departments.csv', filteredDepartments)}
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+        >
+          تصدير
+        </button>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"

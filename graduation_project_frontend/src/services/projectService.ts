@@ -141,8 +141,18 @@ export const projectService = {
   },
 
   async getProjectsWithGroups(fields?: string[]) {
-    const req = [{ table: 'projects', fields: fields || ['project_id', 'title', 'type', 'state', 'start_date'] }, { table: 'groups', fields: ['group_id', 'group_name', 'project'] }];
+    const req = [
+      { table: 'projects', fields: fields || ['project_id', 'title', 'type', 'state', 'start_date', 'description', 'college'] },
+      { table: 'groups', fields: ['group_id', 'group_name', 'project'] },
+      { table: 'group_members', fields: ['id', 'user', 'group'] },
+      { table: 'group_supervisors', fields: ['id', 'user', 'group', 'type'] },
+      { table: 'users', fields: ['id', 'first_name', 'last_name', 'name'] },
+      { table: 'colleges', fields: ['cid', 'name_ar'] },
+    ];
+
+    console.log('[projectService] getProjectsWithGroups request:', JSON.stringify(req));
     const data = await bulkFetch(req);
+    console.log('[projectService] getProjectsWithGroups response keys:', Object.keys(data));
     return data;
   },
 };

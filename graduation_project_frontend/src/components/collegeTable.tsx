@@ -1,6 +1,7 @@
 // export default CollegeTable;
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import { exportToCSV } from './tableUtils';
 
 interface College {
   cid: number;
@@ -106,12 +107,20 @@ const CollegeTable: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <button
-          onClick={openAddModal}
-          className="bg-blue-500 text-white px-4 py-2 rounded ml-4 hover:bg-blue-600 transition"
-        >
-          + Add College
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToCSV('colleges.csv', filteredColleges)}
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+          >
+            تصدير
+          </button>
+          <button
+            onClick={openAddModal}
+            className="bg-blue-500 text-white px-4 py-2 rounded ml-0 hover:bg-blue-600 transition"
+          >
+            + Add College
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto shadow-lg rounded-lg">
