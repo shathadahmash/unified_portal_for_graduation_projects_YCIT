@@ -7,6 +7,7 @@ from .views import (
     ProjectViewSet, ApprovalRequestViewSet, NotificationViewSet,
     dropdown_data, UserRolesViewSet
 )
+from .views import bulk_fetch
 
 # إنشاء router للـ ViewSets
 router = DefaultRouter()
@@ -23,6 +24,7 @@ urlpatterns = [
     # API Endpoints
     path('', include(router.urls)),
     path('dropdown-data/', dropdown_data, name='dropdown-data'),
+    path('bulk-fetch/', bulk_fetch, name='bulk-fetch'),
     
     # Custom Approval Actions
     path('approvals/<int:pk>/approve/', ApprovalRequestViewSet.as_view({'post': 'approve'}), name='approval-approve'),

@@ -8,11 +8,12 @@ from django.db import models, transaction
 from django.db.models.functions import ExtractYear
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import JsonResponse
 
 from .models import (
     User, Group, GroupMembers, GroupSupervisors, GroupInvitation,
     Project, ApprovalRequest, Role, AcademicAffiliation,
-    GroupCreationRequest, GroupMemberApproval, NotificationLog, College, UserRoles
+    GroupCreationRequest, GroupMemberApproval, NotificationLog, College, Department, UserRoles
 )
 from .serializers import (
     GroupSerializer, GroupDetailSerializer, GroupCreateSerializer,
@@ -295,7 +296,8 @@ class GroupMembersViewSet(viewsets.ReadOnlyModelViewSet):
 
 class ProjectFilter(django_filters.FilterSet):
     college = django_filters.NumberFilter(field_name="college__cid")
-    supervisor = django_filters.NumberFilter(field_name="group__groupsupervisors__user__id")
+    # Project -> Group(s) (related_name='groups') -> GroupSupervisors -> user
+    supervisor = django_filters.NumberFilter(field_name="groups__groupsupervisors__user__id")
     year = django_filters.NumberFilter(field_name="start_date__year")
 
     class Meta:
@@ -317,11 +319,36 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project_type = self.request.query_params.get("type")
         if project_type:
             qs = qs.filter(type=project_type)
+        
+        # التحقق من دور الشركة الخارجية
+        is_external = UserRoles.objects.filter(user=user, role__type__icontains='External').exists()
+        
+        if is_external:
+            # عرض المشاريع التي أنشأتها هذه الشركة فقط
+            return qs.filter(created_by=user)
+        
         if PermissionManager.is_student(user) or PermissionManager.is_admin(user):
             return qs
         if PermissionManager.is_supervisor(user):
             return qs.filter(group__groupsupervisors__user=user).distinct()
         return qs.none()
+
+    def create(self, request, *args, **kwargs):
+        """Override create to default missing start_date to today and set created_by."""
+        try:
+            data = request.data.copy()
+            if not data.get('start_date'):
+                data['start_date'] = timezone.now().date().isoformat()
+
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            # Save with created_by set to request.user if serializer/model allows it
+            instance = serializer.save(created_by=request.user)
+            out_serializer = self.get_serializer(instance)
+            return Response(out_serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f"Project create failed: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'], url_path='filter-options')
     def filter_options(self, request):
@@ -354,6 +381,69 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if not project:
             return Response({'message': 'No project found'}, status=200)
         return Response(ProjectSerializer(project).data)
+
+    @action(detail=False, methods=['post'])
+    def propose(self, request):
+        user = request.user
+        title = request.data.get('title')
+        description = request.data.get('description')
+        
+        if not title or not description:
+            return Response({'error': 'Title and description are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # إنشاء المشروع مع تعيين created_by لضمان المزامنة
+            project = Project.objects.create(
+                title=title,
+                description=description,
+                type='PrivateCompany',
+                state='Pending',
+                created_by=user,
+                start_date=timezone.now().date()
+            )
+            
+            # محاولة إنشاء طلب موافقة تلقائي
+            try:
+                # البحث عن دور رئيس القسم
+                dept_head_role = Role.objects.filter(type__icontains='Department Head').first()
+                if dept_head_role:
+                    dept_head = UserRoles.objects.filter(role=dept_head_role).first()
+                    if dept_head:
+                        ApprovalRequest.objects.create(
+                            approval_type='external_project',
+                            project=project,
+                            requested_by=user,
+                            current_approver=dept_head.user,
+                            status='pending'
+                        )
+            except Exception as e:
+                print(f"Approval request creation failed: {e}")
+
+            serializer = self.get_serializer(project)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f"Project creation failed: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['patch', 'put'])
+    def update_project(self, request, pk=None):
+        project = self.get_object()
+        if project.created_by != request.user:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = self.get_serializer(project, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['delete'])
+    def delete_project(self, request, pk=None):
+        project = self.get_object()
+        if project.created_by != request.user:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        project.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ============================================================================================
@@ -483,6 +573,61 @@ def get_all_users(request):
     users = User.objects.all()
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_fetch(request):
+    """Bulk fetch multiple tables and specific fields.
+    POST body: { requests: [ { table: 'projects', fields: ['project_id','title'] }, ... ] }
+    Returns JSON mapping table -> list of rows (as dicts) or error.
+    """
+    # mapping of supported table keys to model classes
+    mapping = {
+        'projects': Project,
+        'groups': Group,
+        'group_members': GroupMembers,
+        'group_supervisors': GroupSupervisors,
+        'users': User,
+        'academic_affiliations': AcademicAffiliation,
+        'colleges': College,
+        'departments': Department,
+    }
+
+    out = {}
+    try:
+        reqs = request.data.get('requests', [])
+        import traceback
+        for r in reqs:
+            table = r.get('table')
+            if not table or table not in mapping:
+                out[table or 'unknown'] = {'error': 'unsupported table'}
+                continue
+            model = mapping[table]
+            # compute default fields dynamically from model meta if not provided
+            if r.get('fields'):
+                fields = r.get('fields')
+            else:
+                pk = model._meta.pk.name
+                # include up to 6 additional non-related fields
+                extra = [f.name for f in model._meta.fields if f.name != pk]
+                fields = [pk] + extra[:6]
+
+            try:
+                qs = model.objects.all().values(*fields)
+                # Apply permission-aware filter for projects: external users only see their created ones
+                if table == 'projects':
+                    user = request.user
+                    is_external = UserRoles.objects.filter(user=user, role__type__icontains='External').exists()
+                    if is_external:
+                        qs = qs.filter(created_by=user)
+                out[table] = list(qs)
+            except Exception as e:
+                out[table] = {'error': str(e), 'traceback': traceback.format_exc()}
+        return JsonResponse(out, safe=True)
+    except Exception as e:
+        import traceback
+        return JsonResponse({'error': str(e), 'traceback': traceback.format_exc()}, status=400)
 
 
 # ============================================================================================

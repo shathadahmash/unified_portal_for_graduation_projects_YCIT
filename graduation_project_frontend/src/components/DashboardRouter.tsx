@@ -55,7 +55,7 @@ const DashboardRouter: React.FC = () => {
       return <SystemManagerDashboard />;
     case 'ministry':
       return <MinistryDashboard />;
-    case 'external_company':
+    case 'external company':
       return <ExternalCompanyDashboard />;
     default:
       return (

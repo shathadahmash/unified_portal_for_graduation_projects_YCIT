@@ -79,11 +79,17 @@ export const groupService = {
     const res = await api.post(`/groups/${groupId}/link-project/`, { project_id: projectId });
     return res.data;
   },
-
+//////////////////////////////////////////////
   // --- جلب المجموعات ---
   async getGroups() {
     const response = await api.get('/groups/');
     return response.data;
+  },
+
+  async getGroupsFields(fields?: string[]) {
+    const { fetchTableFields } = await import('./bulkService');
+    const rows = await fetchTableFields('groups', fields);
+    return rows;
   },
 
   async getGroupById(groupId: number) {

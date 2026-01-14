@@ -13,6 +13,10 @@ from .models import (
     CollegeProgressPattern,
     DepartmentProgressPattern
 )
+from .models import (
+    ProgressSubStage, PatternSubStageAssignment, StudentProgress,
+    GroupCreationRequest, GroupMemberApproval
+)
 
 # ============================================================================== 
 # 1. إدارة مراحل التقدم (ProgressStage)
@@ -48,6 +52,20 @@ class PatternStageAssignmentAdmin(admin.ModelAdmin):
     list_display = ('pattern', 'stage', 'order', 'max_mark')
     list_filter = ('pattern',)
     search_fields = ('pattern__name', 'stage__name')
+
+
+@admin.register(ProgressSubStage)
+class ProgressSubStageAdmin(admin.ModelAdmin):
+    list_display = ('id', 'stage', 'name', 'order', 'max_mark')
+    list_filter = ('stage',)
+    search_fields = ('name', 'stage__name')
+
+
+@admin.register(PatternSubStageAssignment)
+class PatternSubStageAssignmentAdmin(admin.ModelAdmin):
+    list_display = ('pattern_stage_assignment', 'sub_stage', 'order', 'max_mark')
+    list_filter = ('pattern_stage_assignment__pattern',)
+    search_fields = ('pattern_stage_assignment__pattern__name', 'sub_stage__name')
 
 
 # ============================================================================== 
@@ -161,19 +179,18 @@ class UserRolesAdmin(admin.ModelAdmin):
 # ==============================================================================
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    # إضافة 'college' هنا لعرضها في الجدول الرئيسي للمشاريع
-    list_display = ('project_id', 'title', 'get_college_name', 'type', 'state', 'start_date')
-    
-    # إضافة الفلترة حسب الكلية لتسهيل البحث
+    list_display = ('project_id', 'title', 'type', 'state', 'get_college_name', 'created_by', 'start_date')
     list_filter = ('college', 'type', 'state', 'start_date')
-    
-    search_fields = ('title', 'description', 'college__name_ar')
+    search_fields = ('title', 'description', 'college__name_ar', 'created_by__username')
     readonly_fields = ('project_id',)
+    ordering = ('-start_date',)
+    list_select_related = ('college', 'created_by')
+    list_per_page = 25
+    list_editable = ('state',)
 
-    # تحسين شكل صفحة الإضافة (Add Project) ليكون اختيار الكلية في البداية
     fieldsets = (
         ('الارتباط الأكاديمي', {
-            'fields': ('college',)
+            'fields': ('college', 'created_by')
         }),
         ('معلومات المشروع الأساسية', {
             'fields': ('title', 'description', 'type', 'state')
@@ -183,10 +200,10 @@ class ProjectAdmin(admin.ModelAdmin):
         }),
     )
 
-    # دالة لعرض اسم الكلية بالعربي في الجدول الرئيسي
     def get_college_name(self, obj):
         return obj.college.name_ar if obj.college else "غير مرتبط بكلية"
     get_college_name.short_description = 'الكلية'
+    get_college_name.admin_order_field = 'college__name_ar'
     
 @admin.register(Group)
 class GroupAdmin(admin.ModelAdmin):
@@ -240,6 +257,19 @@ class GroupAdmin(admin.ModelAdmin):
     raw_id_fields = ('project',) # مفيد جداً إذا كان عدد المشاريع كبيراً جداً
     autocomplete_fields = ('program', 'pattern') # يتطلب وجود search_fields في Admin الخاص بهما
 
+    # Inline members and supervisors for quick editing
+    class GroupMembersInline(admin.TabularInline):
+        model = GroupMembers
+        extra = 0
+        autocomplete_fields = ('user',)
+
+    class GroupSupervisorsInline(admin.TabularInline):
+        model = GroupSupervisors
+        extra = 0
+        autocomplete_fields = ('user',)
+
+    inlines = [GroupMembersInline, GroupSupervisorsInline]
+
     # 7. دالة مخصصة لعرض القسم في القائمة (لأن العلاقة عبر البرنامج)
     def get_department(self, obj):
         if obj.program:
@@ -270,6 +300,28 @@ class GroupSupervisorsAdmin(admin.ModelAdmin):
     list_display = ('user', 'group')
     list_filter = ('group',)
     search_fields = ('user__username', 'group__group_name')
+
+
+@admin.register(StudentProgress)
+class StudentProgressAdmin(admin.ModelAdmin):
+    list_display = ('student', 'group', 'pattern_stage_assignment', 'sub_stage_assignment', 'score', 'updated_at')
+    list_filter = ('group', 'pattern_stage_assignment__pattern')
+    search_fields = ('student__username', 'group__group_name')
+    readonly_fields = ('updated_at', 'created_at')
+
+
+@admin.register(GroupCreationRequest)
+class GroupCreationRequestAdmin(admin.ModelAdmin):
+    list_display = ('id', 'group_name', 'creator', 'is_fully_confirmed', 'created_at')
+    list_filter = ('is_fully_confirmed', 'created_at')
+    search_fields = ('group_name', 'creator__username')
+
+
+@admin.register(GroupMemberApproval)
+class GroupMemberApprovalAdmin(admin.ModelAdmin):
+    list_display = ('request', 'user', 'role', 'status', 'responded_at')
+    list_filter = ('role', 'status')
+    search_fields = ('user__username', 'request__group_name')
 
 
 # ==============================================================================
@@ -341,3 +393,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
 class ApprovalSequenceAdmin(admin.ModelAdmin):
     list_display = ('sequence_id', 'sequence_type', 'approval_levels')
     search_fields = ('sequence_type',)
+
+
+
+

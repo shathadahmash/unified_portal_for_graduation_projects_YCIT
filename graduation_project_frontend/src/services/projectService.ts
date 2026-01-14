@@ -1,4 +1,5 @@
 import api from './api';
+import { bulkFetch } from './bulkService';
 
 export interface Project {
   project_id?: number; // optional when creating
@@ -16,21 +17,25 @@ export interface Project {
 
 export const projectService = {
   async getProjects(params?: any) {
+    console.log('[projectService] getProjects called with params:', params);
     try {
-      const response = await api.get('/projects/', { params });
+      const response = await api.get('projects/', { params });
+      console.log('[projectService] getProjects response:', response.status, response.data);
       return response.data;
-    } catch (error) {
-      console.error('Failed to fetch projects:', error);
+    } catch (error: any) {
+      console.error('[projectService] Failed to fetch projects:', error?.response?.status, error?.response?.data ?? error?.message ?? error);
       return [];
     }
   },
 
   async getProject() {
+    console.log('[projectService] getProject called');
     try {
-      const response = await api.get('/projects/');
+      const response = await api.get('projects/');
+      console.log('[projectService] getProject response:', response.status, response.data);
       return response.data;
-    } catch (error) {
-      console.error('Failed to fetch projects:', error);
+    } catch (error: any) {
+      console.error('[projectService] Failed to fetch projects (getProject):', error?.response?.status, error?.response?.data ?? error?.message ?? error);
       return [];
     }
   },
@@ -68,20 +73,31 @@ export const projectService = {
   },
 
   async proposeProject(payload: Project) {
-    try {
-      // Ensure required fields are present
-      if (!payload.start_date) {
-        throw new Error('start_date is required (YYYY-MM-DD)');
-      }
-      if (!payload.type) {
-        throw new Error('type is required');
-      }
+    // Provide sensible defaults for missing required fields
+    if (!payload.start_date) {
+      // default to today's date in YYYY-MM-DD
+      payload.start_date = new Date().toISOString().slice(0, 10);
+    }
+    if (!payload.type) {
+      payload.type = 'PrivateCompany';
+    }
 
-      const response = await api.post('/projects/', payload);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to propose project:', error);
-      throw error;
+    // Prefer the custom 'propose' action if available on backend, fall back to standard create
+    try {
+      console.log('[projectService] proposeProject -> trying /projects/propose/ with payload:', payload);
+      const resp = await api.post('/projects/propose/', payload);
+      console.log('[projectService] proposeProject response (propose):', resp.status, resp.data);
+      return resp.data;
+    } catch (err: any) {
+      console.warn('[projectService] /projects/propose/ failed, falling back to POST /projects/', err?.response?.status, err?.response?.data ?? err?.message ?? err);
+      try {
+        const resp2 = await api.post('/projects/', payload);
+        console.log('[projectService] proposeProject response (create):', resp2.status, resp2.data);
+        return resp2.data;
+      } catch (err2: any) {
+        console.error('[projectService] Failed to propose/create project:', err2?.response?.status, err2?.response?.data ?? err2?.message ?? err2);
+        throw err2;
+      }
     }
   },
 
@@ -122,5 +138,21 @@ export const projectService = {
       console.error('Failed to download file:', error);
       throw error;
     }
+  },
+
+  async getProjectsWithGroups(fields?: string[]) {
+    const req = [
+      { table: 'projects', fields: fields || ['project_id', 'title', 'type', 'state', 'start_date', 'description', 'college'] },
+      { table: 'groups', fields: ['group_id', 'group_name', 'project'] },
+      { table: 'group_members', fields: ['id', 'user', 'group'] },
+      { table: 'group_supervisors', fields: ['id', 'user', 'group', 'type'] },
+      { table: 'users', fields: ['id', 'first_name', 'last_name', 'name'] },
+      { table: 'colleges', fields: ['cid', 'name_ar'] },
+    ];
+
+    console.log('[projectService] getProjectsWithGroups request:', JSON.stringify(req));
+    const data = await bulkFetch(req);
+    console.log('[projectService] getProjectsWithGroups response keys:', Object.keys(data));
+    return data;
   },
 };
