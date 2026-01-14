@@ -9,6 +9,9 @@ interface College {
   branch: { ubid: number; location: string } | null;
 }
 
+
+// fatima
+
 const CollegeTable: React.FC = () => {
   const [colleges, setColleges] = useState<College[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
