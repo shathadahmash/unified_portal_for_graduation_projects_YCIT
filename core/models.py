@@ -407,6 +407,9 @@ class Group(models.Model):
         blank=True,
         related_name='groups'
     )
+    
+    
+    
 
     # الارتباط بالمشروع (تم تصحيح استدعاء الحقل في دالة __str__)
     project = models.ForeignKey(
