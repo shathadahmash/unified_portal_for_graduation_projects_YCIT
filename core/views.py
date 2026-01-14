@@ -34,6 +34,91 @@ from core.notification_manager import NotificationManager
 class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
+#fatima added this for the supervisor 
+#(to only return groups of the supervisor)
+    def get_queryset(self):
+        user = self.request.user
+
+        if PermissionManager.is_admin(user):
+            return Group.objects.all()
+
+        if PermissionManager.is_supervisor(user):
+            return Group.objects.filter(groupsupervisors__user=user).distinct()
+
+        if PermissionManager.is_student(user):
+            return Group.objects.filter(groupmembers__user=user).distinct()
+
+        return Group.objects.none()
+    # group creation by the supervisor
+    @action(detail=False, methods=['post'], url_path='create-by-supervisor', permission_classes=[IsAuthenticated])
+    def create_by_supervisor(self, request):
+        user = request.user
+
+        if not PermissionManager.is_supervisor(user):
+           return Response({"error": "فقط المشرف يمكنه تنفيذ هذا الإجراء"}, status=403)
+
+        data = request.data
+        group_name = data.get("group_name", "").strip()
+        student_ids = data.get("student_ids", [])
+
+        if not group_name:
+           return Response({"error": "يرجى كتابة اسم المجموعة"}, status=400)
+
+        if not student_ids or not isinstance(student_ids, list):
+           return Response({"error": "يجب تحديد طالب واحد على الأقل"}, status=400)
+
+    # مهم: منع أي طالب من أن يكون في مجموعة أخرى
+        existing = GroupMembers.objects.filter(user_id__in=student_ids).values_list("user_id", flat=True)
+        existing_ids = list(set(existing))
+        if existing_ids:
+            taken_students = User.objects.filter(id__in=existing_ids).values("id", "name")
+            return Response({
+               "error": "بعض الطلاب مرتبطون بالفعل بمجموعة أخرى",
+               "students": list(taken_students)
+            }, status=400)
+
+    # جلب الطلاب
+        students = list(User.objects.filter(id__in=student_ids))
+        if len(students) != len(student_ids):
+            return Response({"error": "تحقق من صحة student_ids"}, status=400)
+
+    # أسماء الأعضاء لإرسالها في الإشعار
+        member_names = [s.name or s.username for s in students]
+        members_text = "، ".join(member_names)
+
+        try:
+            with transaction.atomic():
+            # إنشاء المجموعة مباشرة
+                group = Group.objects.create(group_name=group_name)
+
+            # إضافة المشرف الحالي كمشرف للمجموعة
+                GroupSupervisors.objects.create(user=user, group=group, type='supervisor')
+
+            # إضافة الطلاب كأعضاء
+                GroupMembers.objects.bulk_create([
+                    GroupMembers(user=s, group=group) for s in students
+                ])
+
+            # إرسال إشعار لكل طالب: تمت إضافتك بواسطة المشرف + أسماء أعضاء المجموعة
+                for s in students:
+                    NotificationManager.create_notification(
+                       recipient=s,
+                       notification_type='invitation',  # أو system / message حسب اختياركم
+                       title='تمت إضافتك إلى مجموعة',
+                       message=f'قام المشرف {user.name or user.username} بإضافتك إلى مجموعة "{group.group_name}". أعضاء المجموعة: {members_text}',
+                       related_group=group
+                    )
+
+                return Response({
+                   "message": "تم إنشاء المجموعة وإضافة الطلاب بنجاح",
+                    "group_id": group.group_id
+                }, status=201)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
+
+# till here
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -324,7 +409,9 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='mark-all-read')
     def mark_all_read(self, request):
-        self.get_queryset().update(status='read')
+        #self.get_queryset().update(status='read')
+        #fatima modified the previous line to this 
+        self.get_queryset().update(is_read=True,read_at=timezone.now)
         return Response({'status': 'success'})
 
 
