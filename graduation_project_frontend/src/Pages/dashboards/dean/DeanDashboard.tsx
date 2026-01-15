@@ -13,12 +13,13 @@ import ProjectSearch from '../ProjectSearch';
 import ProjectSelectionPage from '../ProjectSelectionPage';
 import NotificationsPanel from '../../../components/NotificationsPanel'; 
 import { useNotifications } from '../../../hooks/useNotifications'; 
-import CoSupervisorsTable from '../../../components/CoSupervisorsTable';
-import SupervisorsTable from '../../../components/SupervisorsTable';
-import ProjectTable from '../../../components/ProjectTable';
-import ProjectReportPage from '../../../components/ProjectReportPage';
-import SupervisorsReportPage from '../../../components/SupervisorsReportPage';
-import CoSupervisorsReportPage from '../../../components/CoSupervisorsReportPage';
+import CoSupervisorsTable from './CoSupervisorsTable';
+import SupervisorsTable from './SupervisorsTable';
+import ProjectTable from './ProjectTable';
+import ProjectReportPage from './ProjectReportPage';
+import SupervisorsReportPage from './SupervisorsReportPage';
+import CoSupervisorsReportPage from './CoSupervisorsReportPage';
+import GroupsTable from './GroupsTable';
 
 const DeanDashboard: React.FC = () => {
   const { user } = useAuthStore();
@@ -406,8 +407,8 @@ const DeanDashboard: React.FC = () => {
           )}
 
           {activeTab === 'groups' && (
-            <div className="theme-card p-8 rounded-3xl">
-              <h2 className="text-2xl font-black text-slate-800 mb-6">المجموعات</h2>
+            <div className="theme-card p-0 rounded-3xl">
+              <GroupsTable />
             </div>
           )}
 

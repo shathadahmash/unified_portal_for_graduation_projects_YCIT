@@ -123,6 +123,12 @@ export const groupService = {
     return response.data;
   },
 
+  // حذف مجموعة كاملة
+  async deleteGroup(groupId: number) {
+    const response = await api.delete(`/groups/${groupId}/`);
+    return response.data;
+  },
+
   async getCollegeGroups(collegeId: number) {
    const res = await api.get(`/groups/?college_id=${collegeId}`);
    return res.data;

@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from .models import (
     User, Group, GroupMembers, GroupSupervisors, GroupInvitation,
     Project, ApprovalRequest, Role, AcademicAffiliation,
+    Permission, RolePermission,
     GroupCreationRequest, GroupMemberApproval, NotificationLog, College, Department, UserRoles
 )
 from .serializers import (
@@ -23,6 +24,7 @@ from .serializers import (
     RoleSerializer, UserSerializer
 )
 from .serializers import UserRolesSerializer
+from .serializers import PermissionSerializer, RolePermissionSerializer
 from .permissions import PermissionManager
 from .utils import InvitationService, NotificationService
 from core.notification_manager import NotificationManager
@@ -548,6 +550,49 @@ class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     permission_classes = [IsAuthenticated]
+
+    @action(detail=True, methods=['get'])
+    def permissions(self, request, pk=None):
+        """Return list of permissions assigned to this role."""
+        perms = RolePermission.objects.filter(role_id=pk).select_related('permission')
+        permissions = [rp.permission for rp in perms]
+        serializer = PermissionSerializer(permissions, many=True)
+        return Response(serializer.data)
+
+
+class PermissionViewSet(viewsets.ModelViewSet):
+    """CRUD for Permission model."""
+    queryset = Permission.objects.all()
+    serializer_class = PermissionSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class RolePermissionViewSet(viewsets.ModelViewSet):
+    """Assign/remove permissions to roles. Create uses get_or_create, destroy supports query params."""
+    queryset = RolePermission.objects.all()
+    serializer_class = RolePermissionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        role_id = data.get('role') or data.get('role_id')
+        perm_id = data.get('permission') or data.get('permission_id')
+        if not role_id or not perm_id:
+            return Response({'detail': 'role and permission are required'}, status=400)
+        obj, created = RolePermission.objects.get_or_create(role_id=role_id, permission_id=perm_id)
+        serializer = self.get_serializer(obj)
+        return Response(serializer.data, status=201 if created else 200)
+
+    def destroy(self, request, *args, **kwargs):
+        role_id = request.query_params.get('role') or request.query_params.get('role_id')
+        perm_id = request.query_params.get('permission') or request.query_params.get('permission_id')
+        if role_id and perm_id:
+            qs = RolePermission.objects.filter(role_id=role_id, permission_id=perm_id)
+            deleted, _ = qs.delete()
+            if deleted:
+                return Response(status=204)
+            return Response({'detail': 'not found'}, status=404)
+        return super().destroy(request, *args, **kwargs)
 
 
 # ============================================================================================

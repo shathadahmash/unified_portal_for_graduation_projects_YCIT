@@ -7,6 +7,7 @@ from .views import (
     ProjectViewSet, ApprovalRequestViewSet, NotificationViewSet,
     dropdown_data, UserRolesViewSet
 )
+from .views import PermissionViewSet, RolePermissionViewSet
 from .views import bulk_fetch
 
 # إنشاء router للـ ViewSets
@@ -19,6 +20,8 @@ router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'approvals', ApprovalRequestViewSet, basename='approval')
 router.register(r'roles', RoleViewSet, basename='role')
 router.register(r'user-roles', UserRolesViewSet, basename='userrole')
+router.register(r'permissions', PermissionViewSet, basename='permission')
+router.register(r'role-permissions', RolePermissionViewSet, basename='rolepermission')
 
 urlpatterns = [
     # API Endpoints

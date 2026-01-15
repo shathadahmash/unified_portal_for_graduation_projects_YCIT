@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { projectService, Project } from '../services/projectService';
-import { userService, User } from '../services/userService';
-import { FiDownload, FiPlus, FiEdit3 } from 'react-icons/fi';
-import { exportToCSV } from './tableUtils';
-import { containerClass, tableWrapperClass, tableClass, theadClass } from './tableStyles';
-import ProjectForm from '../Pages/dashboards/ProjectForm';
+import { projectService, Project } from '../../../services/projectService';
+import { userService, User } from '../../../services/userService';
+import { FiDownload } from 'react-icons/fi';
+import { exportToCSV } from '../../../components/tableUtils';
+import { containerClass, tableWrapperClass, tableClass, theadClass } from '../../../components/tableStyles';
 
 interface ProjectWithUsers extends Project {
   users?: User[]; // optional: users associated with this project
@@ -13,6 +12,7 @@ interface ProjectWithUsers extends Project {
 const ProjectsTable: React.FC = () => {
   const [projects, setProjects] = useState<ProjectWithUsers[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleRows, setVisibleRows] = useState<number>(10);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<any>({ college: '', supervisor: '', year: '', type: '', state: '' });
   const [filterOptions, setFilterOptions] = useState<any>({ colleges: [], supervisors: [], years: [], types: [], states: [] });
@@ -21,9 +21,6 @@ const ProjectsTable: React.FC = () => {
   const [yearInput, setYearInput] = useState('');
   const [typeInput, setTypeInput] = useState('');
   const [stateInput, setStateInput] = useState('');
-
-  const [showProjectForm, setShowProjectForm] = useState(false);
-  const [editingProject, setEditingProject] = useState<ProjectWithUsers | null>(null);
 
   // fetchProjects moved to component scope so filters can call it
   const fetchProjects = async (params?: any) => {
@@ -189,28 +186,6 @@ const ProjectsTable: React.FC = () => {
 
   return (
     <div className={containerClass}>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-800">إدارة المشاريع</h1>
-          <p className="text-slate-500 mt-1">تنظيم ومتابعة المشاريع الأكاديمية والتخرج</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => exportToCSV('projects.csv', projects)}
-            className="bg-blue-50 text-black px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold"
-          >
-            تصدير
-          </button>
-          <button
-            onClick={() => { setEditingProject(null); setShowProjectForm(true); }}
-            className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all font-bold flex items-center gap-2"
-          >
-            <FiPlus />
-            <span>إنشاء مشروع جديد</span>
-          </button>
-        </div>
-      </div>
-
       <div className="mb-4">
         <div className="bg-white rounded-lg shadow-sm border p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
@@ -372,11 +347,10 @@ const ProjectsTable: React.FC = () => {
             <th className="px-4 py-2 text-right">السنة</th>
             <th className="px-4 py-2 text-right">المستخدمون</th>
             <th className="px-4 py-2 text-center">ملف المشروع</th>
-            <th className="px-4 py-2 text-center">الإجراءات</th>
           </tr>
         </thead>
         <tbody>
-          {projects.map((proj) => (
+          {projects.slice(0, visibleRows).map((proj) => (
             <tr key={proj.project_id} className="border-b last:border-b-0">
               <td className="px-4 py-2 text-right">{proj.title}{proj.group_name ? ` — ${proj.group_name}` : ''}</td>
               <td className="px-4 py-2 text-right">{proj.type}</td>
@@ -398,29 +372,24 @@ const ProjectsTable: React.FC = () => {
                   <FiDownload /> تنزيل
                 </button>
               </td>
-              <td className="px-4 py-2 text-center">
-                <button
-                  onClick={() => { setEditingProject(proj); setShowProjectForm(true); }}
-                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                  title="تعديل"
-                >
-                  <FiEdit3 size={18} />
-                </button>
-              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-    {showProjectForm && (
-      <ProjectForm
-        isOpen={showProjectForm}
-        initialData={editingProject || undefined}
-        mode={editingProject ? 'edit' : 'create'}
-        onClose={() => { setShowProjectForm(false); setEditingProject(null); }}
-        onSuccess={() => { setShowProjectForm(false); setEditingProject(null); fetchProjects(); }}
-      />
+
+    {/* Show more/less */}
+    {!loading && projects.length > visibleRows && (
+      <div className="mt-4 flex justify-center">
+        <button onClick={() => setVisibleRows(v => v + 10)} className="px-4 py-2 bg-white border rounded">عرض المزيد ({projects.length - visibleRows} متبقي)</button>
+      </div>
     )}
+    {!loading && visibleRows > 10 && (
+      <div className="mt-2 flex justify-center">
+        <button onClick={() => setVisibleRows(10)} className="text-sm text-slate-500 underline">عرض أقل</button>
+      </div>
+    )}
+
   </div>
   );
 };
