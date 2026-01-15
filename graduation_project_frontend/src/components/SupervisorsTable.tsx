@@ -256,7 +256,7 @@ const SupervisorsTable: React.FC = () => {
               <option key={r.id} value={r.id}>{r.type}</option>
             ))}
           </select>
-          <button onClick={() => exportToCSV('supervisors.csv', filteredSupervisors)} className="bg-green-500 text-white px-3 py-2 rounded hover:bg-green-600">تصدير</button>
+          <button onClick={() => exportToCSV('supervisors.csv', filteredSupervisors)} className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-600">تصدير</button>
           <button className="btn-blue" onClick={handleCreate}>إضافة مشرف</button>
         </div>
       </div>

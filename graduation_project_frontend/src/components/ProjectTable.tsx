@@ -326,7 +326,7 @@ const ProjectsTable: React.FC = () => {
           </div>
 
           <div className="mt-3 flex justify-end items-center gap-2">
-            <button onClick={() => exportToCSV('projects.csv', projects)} className="text-sm bg-green-500 text-white rounded px-3 py-1">تصدير</button>
+            <button onClick={() => exportToCSV('projects.csv', projects)} className="text-sm bg-blue-700 text-white rounded px-3 py-1">تصدير</button>
             <button onClick={clearFilters} className="text-sm bg-gray-50 border rounded px-3 py-1 text-gray-700">مسح الكل</button>
           </div>
         </div>
