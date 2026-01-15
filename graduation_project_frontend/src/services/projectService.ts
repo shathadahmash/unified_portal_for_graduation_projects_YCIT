@@ -103,7 +103,7 @@ export const projectService = {
 
   async updateProject(projectId: number, payload: Partial<Project>) {
     try {
-      const response = await api.patch(`/projects/${projectId}/update_project/`, payload);
+      const response = await api.patch(`/projects/${projectId}/`, payload);
       return response.data;
     } catch (error) {
       console.error('Failed to update project:', error);
@@ -113,7 +113,7 @@ export const projectService = {
 
   async deleteProject(projectId: number) {
     try {
-      const response = await api.delete(`/projects/${projectId}/delete_project/`);
+      const response = await api.delete(`/projects/${projectId}/`);
       return response.data;
     } catch (error) {
       console.error('Failed to delete project:', error);

@@ -1,6 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
-import api, { ROLES } from '../services/api';
+import api, { ROLES } from '../../../services/api';
+import { useAuthStore } from '../../../store/useStore';
+import { userService } from '../../../services/userService';
 
 interface Student {
   id: number;
@@ -12,6 +14,7 @@ interface Student {
 }
 
 const StudentTable: React.FC = () => {
+  const { user } = useAuthStore();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -24,11 +27,28 @@ const StudentTable: React.FC = () => {
   const fetchStudents = async () => {
     setLoading(true);
     try {
+      // First fetch affiliations to get dean's college
+      const affiliations = await userService.getAffiliations();
+      const departments = await userService.getDepartments();
+
+      // Get dean's college from their affiliation
+      const deanAff = affiliations.find((a: any) => a.id === user?.affiliation);
+      const deanCollegeId = deanAff?.college;
+
       const response = await api.get('/users/');
-      const studentList: Student[] = response.data.filter((u: Student) =>
+      const allUsers = response.data;
+      const studentList: Student[] = allUsers.filter((u: Student) =>
         u.roles.includes(ROLES.STUDENT)
       );
-      setStudents(studentList);
+
+      // Filter students by dean's college
+      const filteredStudents = deanCollegeId ? studentList.filter((s: any) => {
+        const aff = affiliations.find((a: any) => a.id === s.affiliation);
+        const dept = departments.find((d: any) => d.department_id === aff?.department);
+        return dept && dept.college === deanCollegeId;
+      }) : studentList;
+
+      setStudents(filteredStudents);
     } catch (err: any) {
       console.error(err);
       setError('Failed to fetch students');

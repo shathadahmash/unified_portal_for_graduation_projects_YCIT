@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../../services/api';
 import { exportToCSV } from '../../../components/tableUtils';
+import { useAuthStore } from '../../../store/useStore';
+import { userService } from '../../../services/userService';
 
 interface Program {
   pid: number;
@@ -9,6 +11,7 @@ interface Program {
 }
 
 const ProgramTable: React.FC = () => {
+  const { user } = useAuthStore();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -25,8 +28,22 @@ const ProgramTable: React.FC = () => {
   const fetchPrograms = async () => {
     setLoading(true);
     try {
+      // First fetch affiliations to get dean's college
+      const affiliations = await userService.getAffiliations();
+      const deanAff = affiliations.find((a: any) => a.id === user?.affiliation);
+      const deanCollegeId = deanAff?.college;
+
       const response = await api.get('programs/');
-      setPrograms(response.data);
+      const allPrograms = response.data;
+
+      // Fetch departments to filter by college
+      const departments = await userService.getDepartments();
+      const filteredPrograms = deanCollegeId ? allPrograms.filter((p: any) => {
+        const dept = departments.find((d: any) => d.department_id === p.department?.department_id);
+        return dept && dept.college === deanCollegeId;
+      }) : allPrograms;
+
+      setPrograms(filteredPrograms);
     } catch (err) {
       console.error(err);
       console.log(api.defaults.headers.common);

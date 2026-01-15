@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { userService, User } from '../../../services/userService';
+import { useAuthStore } from '../../../store/useStore';
 
 const CoSupervisorsTable: React.FC = () => {
+  const { user } = useAuthStore();
   const [coSupervisors, setCoSupervisors] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -23,27 +25,51 @@ const CoSupervisorsTable: React.FC = () => {
     const fetchCoSupervisors = async () => {
       try {
         setLoading(true);
+        // First fetch affiliations to get dean's college
+        const [cols, deps, affs] = await Promise.all([userService.getColleges(), userService.getDepartments(), userService.getAffiliations()]);
+        setColleges(cols);
+        setDepartments(deps);
+        setAffiliations(affs);
+
+        // Get dean's college from their affiliation
+        const deanAff = affs.find(a => a.id === user?.affiliation);
+        const deanCollegeId = deanAff?.college;
+
         const all = await userService.getAllUsers();
         const filtered = all.filter(u => (u.roles || []).some(r => {
           const t = (r.type || '').toString().toLowerCase().replace(/[_-]/g, ' ');
           return t.includes('co') && t.includes('supervisor');
         }));
-        setCoSupervisors(filtered);
-        try {
-          const [cols, deps, affs] = await Promise.all([userService.getColleges(), userService.getDepartments(), userService.getAffiliations()]);
-          console.log('[CoSupervisorsTable] fetched colleges', cols?.length, 'departments', deps?.length, 'affiliations', affs?.length);
-          setColleges(cols);
-          setDepartments(deps);
-          setAffiliations(affs);
-        } catch (e) { console.warn('[CoSupervisorsTable] failed load affiliations', e); }
+
+        // Filter co-supervisors by dean's college
+        if (deanCollegeId) {
+          const filteredByCollege = filtered.filter(sup => {
+            const aff = affs.find(a => a.id === sup.affiliation);
+            return aff && aff.college === deanCollegeId;
+          });
+          setCoSupervisors(filteredByCollege);
+        } else {
+          setCoSupervisors(filtered);
+        }
       } catch (err) {
         console.error(err);
+        // Fallback
+        try {
+          const all = await userService.getAllUsers();
+          const filtered = all.filter(u => (u.roles || []).some(r => {
+            const t = (r.type || '').toString().toLowerCase().replace(/[_-]/g, ' ');
+            return t.includes('co') && t.includes('supervisor');
+          }));
+          setCoSupervisors(filtered);
+        } catch (e) {
+          console.error(e);
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchCoSupervisors();
-  }, []);
+  }, [user]);
 
   const openModal = async () => {
     try {

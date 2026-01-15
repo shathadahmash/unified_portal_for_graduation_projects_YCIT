@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { groupService } from "../../../services/groupService";
 import { projectService } from '../../../services/projectService';
 import { exportToCSV } from '../../../components/tableUtils';
+import { useAuthStore } from '../../../store/useStore';
 import {
   FiSearch,
   FiChevronDown,
@@ -35,6 +36,7 @@ interface Group {
 }
 
 const GroupsTable: React.FC = () => {
+  const { user } = useAuthStore();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [projectsMap, setProjectsMap] = useState<Record<number, any>>({});
@@ -51,8 +53,15 @@ const GroupsTable: React.FC = () => {
   const fetchGroups = async () => {
     try {
       setLoading(true);
+      // First fetch affiliations to get dean's college
+      const affiliations = await userService.getAffiliations();
+      const deanAff = affiliations.find((a: any) => a.id === user?.affiliation);
+      const deanCollegeId = deanAff?.college;
+
       const data = await groupService.getGroups();
-      setGroups(data || []);
+      // Filter groups by dean's college
+      const filteredGroups = deanCollegeId ? (data || []).filter((g: any) => g.department?.college === deanCollegeId) : (data || []);
+      setGroups(filteredGroups);
 
       const projectIds = Array.from(new Set(
         (data || [])

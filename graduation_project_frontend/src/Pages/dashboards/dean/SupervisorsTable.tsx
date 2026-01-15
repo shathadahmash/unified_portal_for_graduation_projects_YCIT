@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { userService, User } from '../../../services/userService';
 import { exportToCSV } from '../../../components/tableUtils';
 import { containerClass, tableWrapperClass, tableClass, theadClass } from '../../../components/tableStyles';
+import { useAuthStore } from '../../../store/useStore';
 
 const SupervisorsTable: React.FC = () => {
+  const { user } = useAuthStore();
   const [supervisors, setSupervisors] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleRows, setVisibleRows] = useState<number>(10);
@@ -28,6 +30,16 @@ const SupervisorsTable: React.FC = () => {
     const fetchSupervisors = async () => {
       try {
         setLoading(true);
+        // First fetch affiliations to get dean's college
+        const [cols, deps, affs] = await Promise.all([userService.getColleges(), userService.getDepartments(), userService.getAffiliations()]);
+        setColleges(cols);
+        setDepartments(deps);
+        setAffiliations(affs);
+
+        // Get dean's college from their affiliation
+        const deanAff = affs.find(a => a.id === user?.affiliation);
+        const deanCollegeId = deanAff?.college;
+
         const allUsers = await userService.getAllUsers();
         // فلتر فقط المشرفين (استبعاد المشرفين المساعدين)
         const normalize = (s: string) => (s || '').toString().toLowerCase().replace(/[_-]/g, ' ').trim();
@@ -41,27 +53,38 @@ const SupervisorsTable: React.FC = () => {
         };
 
         const filtered = allUsers.filter(u => u.roles.some(r => isSupervisorRole(r.type)));
-        setSupervisors(filtered);
-        // also keep all users for modal
         setAllUsers(allUsers);
-        // load affiliation helpers so we can display college/department
-        try {
-          const [cols, deps, affs] = await Promise.all([userService.getColleges(), userService.getDepartments(), userService.getAffiliations()]);
-          console.log('[SupervisorsTable] fetched colleges', cols?.length, 'departments', deps?.length, 'affiliations', affs?.length);
-          setColleges(cols);
-          setDepartments(deps);
-          setAffiliations(affs);
-        } catch (e) {
-          console.warn('[SupervisorsTable] Failed load affiliation helpers', e);
+
+        // Filter supervisors by dean's college
+        if (deanCollegeId) {
+          const filteredByCollege = filtered.filter(sup => {
+            const aff = affs.find(a => a.id === sup.affiliation);
+            return aff && aff.college === deanCollegeId;
+          });
+          setSupervisors(filteredByCollege);
+        } else {
+          setSupervisors(filtered);
         }
       } catch (err) {
         console.error(err);
+        // Fallback: fetch without filtering
+        try {
+          const allUsers = await userService.getAllUsers();
+          const filtered = allUsers.filter(u => u.roles.some(r => {
+            const t = (r.type || '').toString().toLowerCase().replace(/[_-]/g, ' ');
+            return t.includes('supervisor') && !t.includes('co');
+          }));
+          setSupervisors(filtered);
+          setAllUsers(allUsers);
+        } catch (e) {
+          console.error(e);
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchSupervisors();
-  }, []);
+  }, [user]);
 
   const openModal = async () => {
     try {

@@ -4,12 +4,14 @@ import { userService, User } from '../../../services/userService';
 import { FiDownload } from 'react-icons/fi';
 import { exportToCSV } from '../../../components/tableUtils';
 import { containerClass, tableWrapperClass, tableClass, theadClass } from '../../../components/tableStyles';
+import { useAuthStore } from '../../../store/useStore';
 
 interface ProjectWithUsers extends Project {
   users?: User[]; // optional: users associated with this project
 }
 
 const ProjectsTable: React.FC = () => {
+  const { user } = useAuthStore();
   const [projects, setProjects] = useState<ProjectWithUsers[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleRows, setVisibleRows] = useState<number>(10);
@@ -27,6 +29,11 @@ const ProjectsTable: React.FC = () => {
     setLoading(true);
     console.log('[ProjectsTable] fetchProjects called (bulk)');
     try {
+      // First fetch affiliations to get dean's college
+      const affiliations = await userService.getAffiliations();
+      const deanAff = affiliations.find((a: any) => a.id === user?.affiliation);
+      const deanCollegeId = deanAff?.college;
+
       // First fetch projects with optional filters/search
       const paramsToSend = params ? { ...params } : {};
       if (search) paramsToSend.search = search;
@@ -34,6 +41,9 @@ const ProjectsTable: React.FC = () => {
       const projectsResp = await projectService.getProjects(paramsToSend);
       console.log('[ProjectsTable] projects response:', projectsResp);
       const projectsRaw = Array.isArray(projectsResp) ? projectsResp : (projectsResp.results || []);
+
+      // Filter projects by dean's college
+      const filteredProjectsRaw = deanCollegeId ? projectsRaw.filter((p: any) => p.college == deanCollegeId) : projectsRaw;
 
       // Then fetch related tables for enrichment
       const bulk = await projectService.getProjectsWithGroups();
@@ -45,7 +55,7 @@ const ProjectsTable: React.FC = () => {
       const colleges = Array.isArray(bulk.colleges) ? bulk.colleges : [];
 
       console.log('[ProjectsTable] counts:', {
-        projects: projectsRaw.length,
+        projects: filteredProjectsRaw.length,
         groups: groups.length,
         groupMembers: groupMembers.length,
         groupSupervisors: groupSupervisors.length,
@@ -56,7 +66,7 @@ const ProjectsTable: React.FC = () => {
       const usersById = new Map<number, any>(users.map((u: any) => [u.id, u]));
       const collegesById = new Map<any, any>(colleges.map((c: any) => [c.cid, c.name_ar]));
 
-      const projectsWithUsers: ProjectWithUsers[] = projectsRaw.map((p: any) => {
+      const projectsWithUsers: ProjectWithUsers[] = filteredProjectsRaw.map((p: any) => {
         const relatedGroups = groups.filter((g: any) => g.project === p.project_id);
         const mainGroup = relatedGroups.length ? relatedGroups[0] : null;
         const groupId = mainGroup ? mainGroup.group_id : null;

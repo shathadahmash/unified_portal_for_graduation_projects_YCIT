@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiX, FiSave, FiInfo } from 'react-icons/fi';
 import { projectService } from '../../services/projectService';
+import { groupService } from '../../services/groupService';
 import { useAuthStore } from '../../store/useStore';
 
 interface ProjectFormProps {
@@ -21,12 +22,17 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ isOpen, onClose, onSuccess, i
   const [college, setCollege] = useState('');
   const [year, setYear] = useState('');
   const [state, setState] = useState('Active');
+  const [groupId, setGroupId] = useState('');
+
+  const [colleges, setColleges] = useState<any[]>([]);
+  const [availableGroups, setAvailableGroups] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
+      loadOptions();
       if (initialData && mode === 'edit') {
         setTitle(initialData.title || '');
         setDescription(initialData.description || '');
@@ -35,6 +41,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ isOpen, onClose, onSuccess, i
         setCollege(initialData.college || '');
         setYear(initialData.year || '');
         setState(initialData.state || 'Active');
+        setGroupId(initialData.group_id || '');
       } else {
         // Reset for create
         setTitle('');
@@ -44,9 +51,25 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ isOpen, onClose, onSuccess, i
         setCollege(user?.college_id || '');
         setYear(new Date().getFullYear().toString());
         setState('Active');
+        setGroupId('');
       }
     }
   }, [isOpen, initialData, mode, user]);
+
+  const loadOptions = async () => {
+    try {
+      const [filterOpts, groupsData] = await Promise.all([
+        projectService.getFilterOptions(),
+        groupService.getGroups()
+      ]);
+      setColleges(filterOpts.colleges || []);
+      // Filter groups that don't have a project, but include the current group if editing
+      const available = groupsData.filter((g: any) => !g.project || (mode === 'edit' && initialData?.group_id == g.group_id));
+      setAvailableGroups(available);
+    } catch (err) {
+      console.error('Failed to load options:', err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,6 +99,36 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ isOpen, onClose, onSuccess, i
       }
 
       const projectId = result?.project_id || result?.id;
+
+      // Handle group assignment changes for edit mode
+      if (mode === 'edit' && initialData?.group_id != groupId) {
+        // If changing group, unlink from old group
+        if (initialData.group_id) {
+          try {
+            await groupService.linkProjectToGroup(Number(initialData.group_id), null as any);
+          } catch (unlinkErr) {
+            console.error('Failed to unlink project from old group:', unlinkErr);
+          }
+        }
+        // Link to new group if selected
+        if (groupId) {
+          try {
+            await groupService.linkProjectToGroup(Number(groupId), projectId);
+          } catch (linkErr) {
+            console.error('Failed to link project to new group:', linkErr);
+            setError('تم تحديث المشروع بنجاح لكن فشل في ربطه بالمجموعة الجديدة');
+          }
+        }
+      } else if (groupId && projectId) {
+        // For create mode or if group was selected
+        try {
+          await groupService.linkProjectToGroup(Number(groupId), projectId);
+        } catch (linkErr) {
+          console.error('Failed to link project to group:', linkErr);
+          setError('تم إنشاء المشروع بنجاح لكن فشل في ربطه بالمجموعة');
+        }
+      }
+
       onSuccess(projectId);
       onClose();
       alert(mode === 'edit' ? 'تم تحديث المشروع بنجاح.' : 'تم إنشاء المشروع بنجاح!');
@@ -170,9 +223,15 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ isOpen, onClose, onSuccess, i
                   type="text"
                   value={college}
                   onChange={e => setCollege(e.target.value)}
+                  list="colleges-list"
                   className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="أدخل اسم الكلية"
+                  placeholder="اختر أو أدخل اسم الكلية"
                 />
+                <datalist id="colleges-list">
+                  {colleges.map((c: any) => (
+                    <option key={c.id} value={c.name_ar || c.name} />
+                  ))}
+                </datalist>
               </div>
 
               <div>
@@ -196,6 +255,22 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ isOpen, onClose, onSuccess, i
                   <option value="Active">نشط</option>
                   <option value="Inactive">غير نشط</option>
                   <option value="Completed">مكتمل</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-black text-slate-700 mb-2">تعيين إلى مجموعة (اختياري)</label>
+                <select
+                  value={groupId}
+                  onChange={e => setGroupId(e.target.value)}
+                  className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">لا تعيين</option>
+                  {availableGroups.map((g: any) => (
+                    <option key={g.group_id} value={g.group_id}>
+                      {g.group_name} - {g.department?.name || ''} ({g.academic_year})
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
