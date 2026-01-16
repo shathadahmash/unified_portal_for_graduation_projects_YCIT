@@ -154,6 +154,12 @@ const SystemManagerSidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     }
   };
 
+  // Normalize first role for display (roles can be strings or objects)
+  const firstRoleRaw = user?.roles?.[0];
+  const firstRoleLabel = typeof firstRoleRaw === 'string'
+    ? firstRoleRaw
+    : (firstRoleRaw?.type || firstRoleRaw?.role__type || firstRoleRaw?.name || (firstRoleRaw ? JSON.stringify(firstRoleRaw) : ''));
+
   return (
     <>
       {/* Overlay for mobile */}
@@ -176,7 +182,7 @@ const SystemManagerSidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
             {user?.username?.charAt(0)}
           </div>
           <p className="font-semibold text-gray-900">{user?.username}</p>
-          <p className="text-xs text-gray-500 mt-1">{user?.roles?.[0] || "مدير النظام"}</p>
+          <p className="text-xs text-gray-500 mt-1">{firstRoleLabel || "مدير النظام"}</p>
         </div>
 
         {/* Menu */}

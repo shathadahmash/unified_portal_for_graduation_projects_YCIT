@@ -30,7 +30,11 @@ interface NewUser {
   roleId?: number;
 }
 
-const UsersTable: React.FC = () => {
+interface UsersTableProps {
+  initialRole?: string;
+}
+
+const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -51,7 +55,7 @@ const UsersTable: React.FC = () => {
 
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterRole, setFilterRole] = useState("");
+  const [filterRole, setFilterRole] = useState(initialRole || "");
   const [filterGender, setFilterGender] = useState("");
   const [filterStatus, setFilterStatus] = useState(""); // Active/Inactive
 

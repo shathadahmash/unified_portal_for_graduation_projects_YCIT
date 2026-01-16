@@ -25,10 +25,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { unreadCount } = useNotificationsStore();
   const { user } = useAuthStore();
 
-  const isSystemManager = user?.roles?.includes("System Manager");
-  const isDean = user?.roles?.includes("Dean");
-  const isDepartmentHead = user?.roles?.includes("Department Head");
-  const isPresident = user?.roles?.includes("University President"); // detect president
+  // Normalize roles array to strings for checks (handles roles as strings or objects)
+  const roleStrings: string[] = (user?.roles || []).map((r: any) => typeof r === 'string' ? r : (r.type || r.role__type || r.name || '')).filter(Boolean);
+  const isSystemManager = roleStrings.includes("System Manager");
+  const isDean = roleStrings.includes("Dean");
+  const isDepartmentHead = roleStrings.includes("Department Head");
+  const isPresident = roleStrings.includes("University President"); // detect president
 
   return (
     <div className="flex h-screen bg-gray-50" dir="rtl">

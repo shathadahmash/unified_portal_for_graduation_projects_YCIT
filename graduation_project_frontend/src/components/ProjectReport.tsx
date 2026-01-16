@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { projectService, Project } from "../services/projectService";
 
-const ProjectReport: React.FC = () => {
+const ProjectReport: React.FC<{ departmentId?: number | null }> = ({ departmentId }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     projectService.getProject().then(data => {
-      setProjects(data || []);
+      let rows = data || [];
+      if (departmentId != null) {
+        rows = rows.filter((p: any) => String(p.department_id || p.college || '') === String(departmentId));
+      }
+      setProjects(rows);
       setLoading(false);
     });
-  }, []);
+  }, [departmentId]);
 
   if (loading) {
     return <div className="p-6 text-center">جاري تحميل التقرير...</div>;
