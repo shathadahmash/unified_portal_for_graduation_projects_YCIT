@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { userService, User } from '../services/userService';
-import { exportToCSV } from './tableUtils';
-import { containerClass, tableWrapperClass, tableClass, theadClass } from './tableStyles';
+import { userService, User } from '../../../services/userService';
+import { exportToCSV } from '../../../components/tableUtils';
+import { containerClass, tableWrapperClass, tableClass, theadClass } from '../../../components/tableStyles';
+import { useAuthStore } from '../../../store/useStore';
 
 const SupervisorsTable: React.FC = () => {
+  const { user } = useAuthStore();
   const [supervisors, setSupervisors] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleRows, setVisibleRows] = useState<number>(10);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<number | ''>('');
   const [showModal, setShowModal] = useState(false);
@@ -27,6 +30,16 @@ const SupervisorsTable: React.FC = () => {
     const fetchSupervisors = async () => {
       try {
         setLoading(true);
+        // First fetch affiliations to get dean's college
+        const [cols, deps, affs] = await Promise.all([userService.getColleges(), userService.getDepartments(), userService.getAffiliations()]);
+        setColleges(cols);
+        setDepartments(deps);
+        setAffiliations(affs);
+
+        // Get dean's college from their affiliation
+        const deanAff = affs.find(a => a.id === user?.affiliation);
+        const deanCollegeId = deanAff?.college;
+
         const allUsers = await userService.getAllUsers();
         // فلتر فقط المشرفين (استبعاد المشرفين المساعدين)
         const normalize = (s: string) => (s || '').toString().toLowerCase().replace(/[_-]/g, ' ').trim();
@@ -40,27 +53,38 @@ const SupervisorsTable: React.FC = () => {
         };
 
         const filtered = allUsers.filter(u => u.roles.some(r => isSupervisorRole(r.type)));
-        setSupervisors(filtered);
-        // also keep all users for modal
         setAllUsers(allUsers);
-        // load affiliation helpers so we can display college/department
-        try {
-          const [cols, deps, affs] = await Promise.all([userService.getColleges(), userService.getDepartments(), userService.getAffiliations()]);
-          console.log('[SupervisorsTable] fetched colleges', cols?.length, 'departments', deps?.length, 'affiliations', affs?.length);
-          setColleges(cols);
-          setDepartments(deps);
-          setAffiliations(affs);
-        } catch (e) {
-          console.warn('[SupervisorsTable] Failed load affiliation helpers', e);
+
+        // Filter supervisors by dean's college
+        if (deanCollegeId) {
+          const filteredByCollege = filtered.filter(sup => {
+            const aff = affs.find(a => a.id === sup.affiliation);
+            return aff && aff.college === deanCollegeId;
+          });
+          setSupervisors(filteredByCollege);
+        } else {
+          setSupervisors(filtered);
         }
       } catch (err) {
         console.error(err);
+        // Fallback: fetch without filtering
+        try {
+          const allUsers = await userService.getAllUsers();
+          const filtered = allUsers.filter(u => u.roles.some(r => {
+            const t = (r.type || '').toString().toLowerCase().replace(/[_-]/g, ' ');
+            return t.includes('supervisor') && !t.includes('co');
+          }));
+          setSupervisors(filtered);
+          setAllUsers(allUsers);
+        } catch (e) {
+          console.error(e);
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchSupervisors();
-  }, []);
+  }, [user]);
 
   const openModal = async () => {
     try {
@@ -187,6 +211,8 @@ const SupervisorsTable: React.FC = () => {
     return true;
   });
 
+  const paginated = filteredSupervisors.slice(0, visibleRows);
+
   const handleEdit = async (user: User) => {
     try {
       const us = await userService.getAllUsers();
@@ -277,7 +303,7 @@ const SupervisorsTable: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {filteredSupervisors.map((u, i) => (
+          {paginated.map((u, i) => (
             <tr key={u.id} className="hover:bg-primary-50 last:border-b-0">
               <td className="p-2 border text-right">{i + 1}</td>
               <td className="p-2 border text-right">{u.name || '—'}</td>
@@ -378,6 +404,17 @@ const SupervisorsTable: React.FC = () => {
               <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={submitModal} disabled={isCreating}>{isCreating ? 'جاري الحفظ...' : 'حفظ'}</button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Show more / less */}
+      {!loading && filteredSupervisors.length > visibleRows && (
+        <div className="mt-4 flex justify-center">
+          <button onClick={() => setVisibleRows(v => v + 10)} className="px-4 py-2 bg-white border rounded">عرض المزيد ({filteredSupervisors.length - visibleRows} متبقي)</button>
+        </div>
+      )}
+      {!loading && visibleRows > 10 && (
+        <div className="mt-2 flex justify-center">
+          <button onClick={() => setVisibleRows(10)} className="text-sm text-slate-500 underline">عرض أقل</button>
         </div>
       )}
     </div>

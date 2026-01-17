@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { projectService, Project } from '../services/projectService';
-import { userService, User } from '../services/userService';
+import { projectService, Project } from '../../../services/projectService';
+import { userService, User } from '../../../services/userService';
 import { FiDownload, FiPlus, FiEdit3, FiTrash2 } from 'react-icons/fi';
-import { exportToCSV } from './tableUtils';
-import { containerClass, tableWrapperClass, tableClass, theadClass } from './tableStyles';
-import ProjectForm from '../Pages/dashboards/ProjectForm';
+import { exportToCSV } from '../../../components/tableUtils';
+import { containerClass, tableWrapperClass, tableClass, theadClass } from '../../../components/tableStyles';
+import ProjectForm from '../../../Pages/dashboards/ProjectForm';
 
 interface ProjectWithUsers extends Project {
   users?: User[]; // optional: users associated with this project

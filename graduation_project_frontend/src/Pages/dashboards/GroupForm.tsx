@@ -7,6 +7,9 @@ interface GroupFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (groupId: number) => void;
+  // when provided, the form will work in edit mode and prefill fields
+  initialData?: any;
+  mode?: 'create' | 'edit';
 }
 
 const MAX_STUDENTS = 5;
@@ -18,7 +21,7 @@ interface DropdownUser {
   name: string;
 }
 
-const GroupForm: React.FC<GroupFormProps> = ({ isOpen, onClose, onSuccess }) => {
+const GroupForm: React.FC<GroupFormProps> = ({ isOpen, onClose, onSuccess, initialData, mode }) => {
   const { user } = useAuthStore();
 
   const [groupName, setGroupName] = useState('');
@@ -41,11 +44,28 @@ const GroupForm: React.FC<GroupFormProps> = ({ isOpen, onClose, onSuccess }) => 
 
   useEffect(() => {
     if (isOpen) {
-      // إضافة المستخدم الحالي تلقائياً كعضو مؤسس في المجموعة
-      if (user && user.id) {
+      // إضافة المستخدم الحالي تلقائياً كعضو مؤسس في حال الإنشاء
+      if (!initialData && user && user.id) {
         setSelectedStudents([{ id: user.id, name: user.name || user.username || 'أنت' }]);
       }
       loadDropdownData();
+
+      // إذا كانت بيانات مبدئية متاحة ووضع التحرير
+      if (initialData && mode === 'edit') {
+        // prefilling basic fields
+        setGroupName(initialData.group_name || initialData.groupName || '');
+        setNote(initialData.note || '');
+
+        // members may be an array of objects with user/user_detail or simple ids
+        const members = Array.isArray(initialData.members) ? initialData.members : (initialData.students || []);
+        setSelectedStudents(members.map((m: any) => ({ id: m.user || m.id, name: m.user_detail?.name || m.user_detail?.username || m.name || `#${m.user || m.id}` })));
+
+        const sups = Array.isArray(initialData.supervisors) ? initialData.supervisors : (initialData.supervisors || []);
+        setSelectedSupervisors(sups.map((s: any) => ({ id: s.user || s.id, name: s.user_detail?.name || s.name || `#${s.user || s.id}` })));
+
+        const assists = Array.isArray(initialData.co_supervisors) ? initialData.co_supervisors : (initialData.co_supervisors || []);
+        setSelectedCoSupervisors(assists.map((a: any) => ({ id: a.user || a.id, name: a.user_detail?.name || a.name || `#${a.user || a.id}` })));
+      }
     }
   }, [isOpen, user]);
 
@@ -106,12 +126,19 @@ const GroupForm: React.FC<GroupFormProps> = ({ isOpen, onClose, onSuccess }) => 
     try {
       setLoading(true);
       // إرسال الطلب للـ Backend
-      const result = await groupService.createGroupForApproval(payload);
-      
+      let result: any;
+      if (mode === 'edit' && initialData) {
+        // تحديث المجموعة
+        result = await groupService.updateGroup(initialData.group_id || initialData.id, payload);
+      } else {
+        result = await groupService.createGroupForApproval(payload);
+      }
+
       // إبلاغ المكون الأب بالنجاح
-      onSuccess(result.id); 
+      const gid = result?.group_id || result?.id || result?.id || initialData?.group_id;
+      onSuccess(gid);
       onClose();
-      alert("تم إرسال طلب إنشاء المجموعة بنجاح! سيتم إخطار الأعضاء والمشرفين للموافقة على الانضمام.");
+      alert(mode === 'edit' ? 'تم تحديث المجموعة بنجاح.' : 'تم إرسال طلب إنشاء المجموعة بنجاح! سيتم إخطار الأعضاء والمشرفين للموافقة.');
     } catch (err: any) {
       // معالجة دقيقة لأخطاء السيرفر (Validation Errors)
       const serverData = err.response?.data;
