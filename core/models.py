@@ -586,20 +586,37 @@ class ApprovalRequest(models.Model):
         ordering = ['-created_at']
 
 class NotificationLog(models.Model):
-    NOTIFICATION_TYPE_CHOICES = [('invitation','دعوة مجموعة'),('approval','موافقة/رفض'),('rejection','رفض'),('transfer','نقل'),('reminder','تذكير'),('system','إشعار نظام'),('message','رسالة')]
+    NOTIFICATION_TYPE_CHOICES = [
+        ('invitation', 'دعوة مجموعة'),
+        ('approval', 'موافقة/رفض'),
+        ('rejection', 'رفض'),
+        ('transfer', 'نقل'),
+        ('reminder', 'تذكير'),
+        ('system', 'إشعار نظام'),
+        ('message', 'رسالة'),
+    ]
+
     notification_id = models.AutoField(primary_key=True)
-    recipient = models.ForeignKey('User', on_delete=models.CASCADE, related_name='notifications', null=True)
-    notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPE_CHOICES, null=True)
+    recipient = models.ForeignKey('User', on_delete=models.CASCADE, related_name='notifications' , null=True)
+    notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPE_CHOICES , null=True)
     title = models.CharField(max_length=255)
     message = models.TextField()
+
     related_group = models.ForeignKey('Group', on_delete=models.SET_NULL, blank=True, null=True)
     related_project = models.ForeignKey('Project', on_delete=models.SET_NULL, blank=True, null=True)
     related_user = models.ForeignKey('User', on_delete=models.SET_NULL, blank=True, null=True, related_name='notifications_about_user')
-    related_approval = models.ForeignKey('ApprovalRequest', on_delete=models.SET_NULL, blank=True, null=True)
+    related_id = models.IntegerField(null=True, blank=True)   
     is_read = models.BooleanField(default=False)
     is_sent_email = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(blank=True, null=True)
+    related_approval = models.ForeignKey(
+        'ApprovalRequest',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='notifications'
+    )
 
     def __str__(self):
         return f"{self.get_notification_type_display()} - {self.recipient.username}"
@@ -607,9 +624,12 @@ class NotificationLog(models.Model):
     class Meta:
         verbose_name_plural = "Notification Logs"
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['recipient','-created_at']), models.Index(fields=['is_read','recipient'])]
-
-# ============================================================================== 
+        indexes = [
+            models.Index(fields=['recipient', '-created_at']),
+            models.Index(fields=['is_read', 'recipient']),
+        ]
+        
+ #============================================================================= 
 # 7. إعدادات النظام وتسلسل الموافقات
 # ==============================================================================
 class SystemSettings(models.Model):
@@ -653,28 +673,49 @@ class ApprovalSequence(models.Model):
 # 8. إنشاء المجموعات عبر الطلبات
 # ==============================================================================
 class GroupCreationRequest(models.Model):
+    # المعلومات الأساسية للمجموعة
     group_name = models.CharField(max_length=255)
     creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_requests')
     department_id = models.IntegerField()
     college_id = models.IntegerField()
     note = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True,null=True)
+    
+    # حالة الطلب الكلية (هل وافق الجميع أم لا يزال قيد الانتظار)
     is_fully_confirmed = models.BooleanField(default=False)
 
     def __str__(self):
         return f"طلب مجموعة: {self.group_name} بواسطة {self.creator.name}"
+    
 
 class GroupMemberApproval(models.Model):
+    # ربط العضو بطلب المجموعة
     request = models.ForeignKey(GroupCreationRequest, on_delete=models.CASCADE, related_name='approvals')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    ROLE_CHOICES = [('student','طالب'),('supervisor','مشرف'),('co_supervisor','أستاذ مساعد')]
+    
+    # تحديد دور العضو في هذا الطلب (طالب، مشرف، مساعد)
+    ROLE_CHOICES = [
+        ('student', 'طالب'),
+        ('supervisor', 'مشرف'),
+        ('co_supervisor', 'أستاذ مساعد'),
+    ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    STATUS_CHOICES = [('pending','قيد الانتظار'),('accepted','تمت الموافقة'),('rejected','مرفوض')]
+    
+    # حالة موافقة هذا العضو تحديداً
+    STATUS_CHOICES = [
+        ('pending', 'قيد الانتظار'),
+        ('accepted', 'تمت الموافقة'),
+        ('rejected', 'مرفوض'),
+    ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     responded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        unique_together = ('request','user')
+        unique_together = ('request', 'user') # لمنع تكرار نفس الشخص في نفس الطلب
+
+
+
+
 
 def check_and_finalize_group(request_id):
     try:

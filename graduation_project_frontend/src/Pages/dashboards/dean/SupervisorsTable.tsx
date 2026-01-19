@@ -36,9 +36,8 @@ const SupervisorsTable: React.FC = () => {
         setDepartments(deps);
         setAffiliations(affs);
 
-        // Get dean's college from their affiliation
-        const deanAff = affs.find(a => a.id === user?.affiliation);
-        const deanCollegeId = deanAff?.college;
+        // Get dean's college from user object
+        const deanCollegeId = user?.college_id;
 
         const allUsers = await userService.getAllUsers();
         // فلتر فقط المشرفين (استبعاد المشرفين المساعدين)

@@ -4,6 +4,7 @@ import { FiX, FiCheck, FiTrash2 } from 'react-icons/fi';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { NOTIFICATION_TYPES } from '../config/api';
+import { approvalService } from '../services/approvalService'; // استيراد خدمة الموافقة
 
 interface NotificationsPanelProps {
   isOpen: boolean;
@@ -20,6 +21,34 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
   } = useNotificationsStore();
 
   if (!isOpen) return null;
+
+  // دالة التعامل مع القبول أو الرفض
+  const handleResponse = async (notification: any, status: 'approve' | 'reject') => {
+    //related_id هو المعرف من السيريالايزر المعدل
+    const approvalId = notification.related_id;
+
+    if (!approvalId) {
+      alert("خطأ: لا يوجد معرف لهذا الطلب.");
+      return;
+    }
+
+    try {
+      if (status === 'approve') {
+        await approvalService.approveRequest(approvalId);
+        alert("تم القبول بنجاح");
+      } else {
+        await approvalService.rejectRequest(approvalId);
+        alert("تم الرفض");
+      }
+      
+      // تحديث حالة الإشعار في الواجهة
+      markAsRead(notification.notification_id);
+      
+    } catch (error: any) {
+      console.error(error);
+      alert(error.response?.data?.error || "حدث خطأ أثناء معالجة الرد");
+    }
+  };
 
   const getNotificationIcon = (type: string) => {
     const icons: Record<string, string> = {
@@ -44,7 +73,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
         onClick={onClose} 
       />
 
-      <div className="fixed top-0 right-0 h-screen w-96 bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out animate-slide-in-left">
+      <div className="fixed top-0 right-0 h-screen w-96 bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 flex items-center justify-between">
           <div>
@@ -89,6 +118,31 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, onClose
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-gray-900 text-sm">{n.title}</h4>
                       <p className="text-gray-600 text-sm mt-1 line-clamp-2">{n.message}</p>
+                      
+                      {/* --- التعديل المحدث لأزرار الموافقة والرفض --- */}
+                    {!n.is_read && n.related_id && (
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // لمنع تداخل الضغطات
+                            handleResponse(n, 'approve');
+                          }}
+                          className="flex-1 bg-blue-600 text-white py-1.5 rounded-md hover:bg-blue-700 transition text-xs font-bold shadow-sm"
+                        >
+                          موافقة
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleResponse(n, 'reject');
+                          }}
+                          className="flex-1 bg-red-50 text-red-600 py-1.5 rounded-md hover:bg-red-100 transition text-xs font-bold border border-red-100"
+                        >
+                          رفض
+                        </button>
+                      </div>
+                    )}
+
                       <p className="text-xs text-gray-500 mt-2">
                         {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ar })}
                       </p>

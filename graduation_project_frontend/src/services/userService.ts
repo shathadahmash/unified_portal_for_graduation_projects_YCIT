@@ -25,6 +25,8 @@ export interface User {
   gender?: string | null;
   roles: Role[];
   permissions?: Permission[];
+  college_id?: number;
+  department_id?: number;
 }
 
 /* ==========================
