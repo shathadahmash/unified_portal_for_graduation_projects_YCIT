@@ -6,7 +6,7 @@ const PRIMARY = "#4F46E5";   // indigo
 const ACCENT = "#10B981";   // emerald
 const MUTED = "#94A3B8";    // slate
 
-const UsersReport: React.FC<{ onlyRole?: string }> = ({ onlyRole }) => {
+const UsersReport: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,14 +19,12 @@ const UsersReport: React.FC<{ onlyRole?: string }> = ({ onlyRole }) => {
         userService.getAllRoles(),
       ]);
 
-      const filtered = onlyRole ? u.filter((usr: any) => Array.isArray(usr.roles) && usr.roles.some((rr: any) => rr.type === onlyRole)) : u;
-
-      setUsers(filtered);
+      setUsers(u);
       setRoles(r);
       setLoading(false);
 
       const max = Math.max(
-        ...r.map(role => filtered.filter(user => user.roles?.some(rr => rr.type === role.type)).length),
+        ...r.map(role => u.filter(user => user.roles?.some(rr => rr.type === role.type)).length),
         1
       );
 
@@ -34,7 +32,7 @@ const UsersReport: React.FC<{ onlyRole?: string }> = ({ onlyRole }) => {
         setBarWidths(
           r.map(
             role =>
-              (filtered.filter(user => user.roles?.some(rr => rr.type === role.type)).length / max) * 100
+              (u.filter(user => user.roles?.some(rr => rr.type === role.type)).length / max) * 100
           )
         );
       }, 300);

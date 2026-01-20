@@ -402,10 +402,10 @@ class Group(models.Model):
     # النمط الذي تختاره المجموعة (يجب أن يكون من أنماط القسم الخاص بالبرنامج)
     pattern = models.ForeignKey(
         'ProgressPattern',
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name='groups'
+       on_delete=models.PROTECT,
+       null=True,
+       blank=True,
+       related_name='groups'
     )
 
     # الارتباط بالمشروع (تم تصحيح استدعاء الحقل في دالة __str__)
@@ -562,16 +562,30 @@ class GroupInvitation(models.Model):
         return timezone.now() > self.expires_at and self.status == 'pending'
 
 class ApprovalRequest(models.Model):
-    APPROVAL_STATUS_CHOICES = [('pending','قيد الانتظار'),('approved','موافق عليه'),('rejected','مرفوض'),('returned','مرجع للتعديل')]
-    APPROVAL_TYPE_CHOICES = [('project_proposal','مقترح مشروع'),('student_transfer','نقل طالب'),('group_transfer','نقل مجموعة'),('external_project','مشروع خارجي'),('co_supervisor','مشرف مشارك')]
+    APPROVAL_STATUS_CHOICES = [
+        ('pending', 'قيد الانتظار'),
+        ('approved', 'موافق عليه'),
+        ('rejected', 'مرفوض'),
+        ('returned', 'مرجع للتعديل'),
+    ]
+
+    APPROVAL_TYPE_CHOICES = [
+        ('project_proposal', 'مقترح مشروع'),
+        ('student_transfer', 'نقل طالب'),
+        ('group_transfer', 'نقل مجموعة'),
+        ('external_project', 'مشروع خارجي'),
+        ('co_supervisor', 'مشرف مشارك'),
+    ]
 
     approval_id = models.AutoField(primary_key=True)
-    approval_type = models.CharField(max_length=50, choices=APPROVAL_TYPE_CHOICES,null=True)
+    approval_type = models.CharField(max_length=50, choices=APPROVAL_TYPE_CHOICES)
     group = models.ForeignKey('Group', on_delete=models.CASCADE, related_name='approval_requests', blank=True, null=True)
     project = models.ForeignKey('Project', on_delete=models.CASCADE, related_name='approval_requests', blank=True, null=True)
+
     requested_by = models.ForeignKey('User', on_delete=models.CASCADE, related_name='approval_requests_created')
-    current_approver = models.ForeignKey('User', on_delete=models.CASCADE, related_name='pending_approvals', null=True)
+    current_approver = models.ForeignKey('User', on_delete=models.CASCADE, related_name='pending_approvals')
     approval_level = models.IntegerField(default=1)
+
     status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='pending')
     comments = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -585,6 +599,8 @@ class ApprovalRequest(models.Model):
         verbose_name_plural = "Approval Requests"
         ordering = ['-created_at']
 
+
+
 class NotificationLog(models.Model):
     NOTIFICATION_TYPE_CHOICES = [
         ('invitation', 'دعوة مجموعة'),
@@ -597,8 +613,8 @@ class NotificationLog(models.Model):
     ]
 
     notification_id = models.AutoField(primary_key=True)
-    recipient = models.ForeignKey('User', on_delete=models.CASCADE, related_name='notifications' , null=True)
-    notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPE_CHOICES , null=True)
+    recipient = models.ForeignKey('User', on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPE_CHOICES)
     title = models.CharField(max_length=255)
     message = models.TextField()
 
@@ -628,8 +644,7 @@ class NotificationLog(models.Model):
             models.Index(fields=['recipient', '-created_at']),
             models.Index(fields=['is_read', 'recipient']),
         ]
-        
- #============================================================================= 
+# ============================================================================== 
 # 7. إعدادات النظام وتسلسل الموافقات
 # ==============================================================================
 class SystemSettings(models.Model):
@@ -679,7 +694,7 @@ class GroupCreationRequest(models.Model):
     department_id = models.IntegerField()
     college_id = models.IntegerField()
     note = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True,null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     
     # حالة الطلب الكلية (هل وافق الجميع أم لا يزال قيد الانتظار)
     is_fully_confirmed = models.BooleanField(default=False)
@@ -712,8 +727,6 @@ class GroupMemberApproval(models.Model):
 
     class Meta:
         unique_together = ('request', 'user') # لمنع تكرار نفس الشخص في نفس الطلب
-
-
 
 
 

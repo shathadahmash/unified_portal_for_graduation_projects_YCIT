@@ -80,11 +80,6 @@ export const roleService = {
     return res.data;
   },
 
-  async getAllRolePermissions(): Promise<any[]> {
-    const res = await api.get('/role-permissions/');
-    return res.data;
-  },
-
   async assignPermissionToRole(roleId: number, permissionId: number): Promise<void> {
     await api.post('/role-permissions/', { role: roleId, permission: permissionId });
   },

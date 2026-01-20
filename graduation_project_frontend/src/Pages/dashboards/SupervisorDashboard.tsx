@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { useAuthStore, useApprovalsStore, useNotificationsStore } from '../../store/useStore';
 import { FiCheckCircle, FiXCircle, FiClock } from 'react-icons/fi';
 import Layout from '../../components/Layout';
-
+import { useNotifications } from '../../hooks/useNotifications';
 const SupervisorDashboard: React.FC = () => {
   const { user } = useAuthStore();
   const { approvals, pendingApprovals } = useApprovalsStore();
   const { notifications, unreadCount } = useNotificationsStore();
+    
+    // تفعيل جلب الإشعارات التلقائي
+    useNotifications();
   
   // التبويب النشط
   const [activeTab, setActiveTab] = useState<'home' | 'approvals' | 'groups' | 'notifications'>('home');

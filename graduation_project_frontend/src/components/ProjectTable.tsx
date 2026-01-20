@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { projectService, Project } from '../services/projectService';
 import { userService, User } from '../services/userService';
-import { FiDownload, FiPlus, FiEdit3, FiTrash2 } from 'react-icons/fi';
+import { FiDownload } from 'react-icons/fi';
 import { exportToCSV } from './tableUtils';
 import { containerClass, tableWrapperClass, tableClass, theadClass } from './tableStyles';
-import ProjectForm from '../Pages/dashboards/ProjectForm';
 
 interface ProjectWithUsers extends Project {
   users?: User[]; // optional: users associated with this project
@@ -21,9 +20,6 @@ const ProjectsTable: React.FC = () => {
   const [yearInput, setYearInput] = useState('');
   const [typeInput, setTypeInput] = useState('');
   const [stateInput, setStateInput] = useState('');
-
-  const [showProjectForm, setShowProjectForm] = useState(false);
-  const [editingProject, setEditingProject] = useState<ProjectWithUsers | null>(null);
 
   // fetchProjects moved to component scope so filters can call it
   const fetchProjects = async (params?: any) => {
@@ -85,7 +81,6 @@ const ProjectsTable: React.FC = () => {
         return {
           ...p,
           users: students,
-          group_id: groupId,
           group_name: mainGroup ? mainGroup.group_name : null,
           supervisor: supervisorUser ? { ...supervisorUser, name: supervisorUser.name || `${supervisorUser.first_name || ''} ${supervisorUser.last_name || ''}`.trim() } : null,
           co_supervisor: coSupervisorUser ? { ...coSupervisorUser, name: coSupervisorUser.name || `${coSupervisorUser.first_name || ''} ${coSupervisorUser.last_name || ''}`.trim() } : null,
@@ -184,46 +179,12 @@ const ProjectsTable: React.FC = () => {
     fetchProjects();
   };
 
-  const handleDeleteProject = async (projectId: number) => {
-    if (!confirm('هل أنت متأكد من حذف هذا المشروع؟ هذا الإجراء لا يمكن التراجع عنه.')) return;
-    try {
-      await projectService.deleteProject(projectId);
-      alert('تم حذف المشروع بنجاح');
-      fetchProjects(); // Refresh the list
-    } catch (err) {
-      console.error('Failed to delete project:', err);
-      alert('فشل في حذف المشروع');
-    }
-  };
-
   if (loading) return <div className="p-6 text-center">Loading projects...</div>;
 
   if (projects.length === 0) return <div className="p-6 text-center">لا توجد مشاريع</div>;
 
   return (
     <div className={containerClass}>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-800">إدارة المشاريع</h1>
-          <p className="text-slate-500 mt-1">تنظيم ومتابعة المشاريع الأكاديمية والتخرج</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => exportToCSV('projects.csv', projects)}
-            className="bg-blue-50 text-black px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold"
-          >
-            تصدير
-          </button>
-          <button
-            onClick={() => { setEditingProject(null); setShowProjectForm(true); }}
-            className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all font-bold flex items-center gap-2"
-          >
-            <FiPlus />
-            <span>إنشاء مشروع جديد</span>
-          </button>
-        </div>
-      </div>
-
       <div className="mb-4">
         <div className="bg-white rounded-lg shadow-sm border p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
@@ -385,7 +346,6 @@ const ProjectsTable: React.FC = () => {
             <th className="px-4 py-2 text-right">السنة</th>
             <th className="px-4 py-2 text-right">المستخدمون</th>
             <th className="px-4 py-2 text-center">ملف المشروع</th>
-            <th className="px-4 py-2 text-center">الإجراءات</th>
           </tr>
         </thead>
         <tbody>
@@ -411,36 +371,11 @@ const ProjectsTable: React.FC = () => {
                   <FiDownload /> تنزيل
                 </button>
               </td>
-              <td className="px-4 py-2 text-center">
-                <button
-                  onClick={() => { setEditingProject(proj); setShowProjectForm(true); }}
-                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all mr-2"
-                  title="تعديل"
-                >
-                  <FiEdit3 size={18} />
-                </button>
-                <button
-                  onClick={() => handleDeleteProject(proj.project_id)}
-                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                  title="حذف"
-                >
-                  <FiTrash2 size={18} />
-                </button>
-              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-    {showProjectForm && (
-      <ProjectForm
-        isOpen={showProjectForm}
-        initialData={editingProject || undefined}
-        mode={editingProject ? 'edit' : 'create'}
-        onClose={() => { setShowProjectForm(false); setEditingProject(null); }}
-        onSuccess={() => { setShowProjectForm(false); setEditingProject(null); fetchProjects(); }}
-      />
-    )}
   </div>
   );
 };

@@ -178,6 +178,8 @@ class GroupDetailSerializer(serializers.ModelSerializer):
             return obj.approvals.count()
         return 0
 
+
+
 # ==============================================================================
 # 4. Serializers الدعوات
 # ==============================================================================
@@ -209,7 +211,6 @@ class CreateGroupInvitationSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("يجب تحديد طالب واحد على الأقل")
         return value
-
 
 
 # ==============================================================================
@@ -257,6 +258,7 @@ class ApprovalRequestSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'approved_at'
         ]
         read_only_fields = ['approval_id', 'created_at', 'updated_at', 'approved_at']
+
 
 
 # ==============================================================================
@@ -391,7 +393,6 @@ class GroupCreateSerializer(serializers.Serializer):
             return group_request
 
 
-
 # ==============================================================================
 # 8. Serializers الإشعارات
 # ==============================================================================
@@ -466,18 +467,29 @@ class UserRolesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserRoles
-        fields = ['id', 'user', 'user_detail', 'role', 'role_detail']
+        fields = ['id', 'user', 'user_detail', 'role', 'ROLE_CHOICES', 'role_detail']
 
 
 
 class GroupMemberStatusSerializer(serializers.ModelSerializer):
-    # ✅ هذا السطر سيجلب الاسم الحقيقي (username) ويضعه في حقل اسمه 'name'
-    name = serializers.CharField(source='user.name', read_only=True)
+    # جلب الاسم من موديل الـ User المرتبط
+    name = serializers.ReadOnlyField(source='user.name') 
+    
+    # الـ role والـ status سيتم جلبهما تلقائياً من موديل GroupMemberApproval
+    # ولكن للتأكد من وصول القيم النصية (student, supervisor) وليس الـ ID
+    role = serializers.CharField(read_only=True)
+    status = serializers.CharField()
 
     class Meta:
-        from .models import GroupMemberApproval
         model = GroupMemberApproval
-        # تأكد من إضافة 'name' هنا لكي يرسلها السيرفر للفرونت إيند
         fields = ['id', 'user', 'name', 'role', 'status']
 
 
+class GroupDetailSerializer(serializers.ModelSerializer):
+    # 'approvals' هو الحقل الذي يبحث عنه الـ React الآن
+    approvals = GroupMemberStatusSerializer(many=True, read_only=True)
+
+    class Meta:
+        from .models import GroupCreationRequest
+        model = GroupCreationRequest
+        fields = ['id', 'group_name', 'creator', 'approvals', 'is_fully_confirmed']

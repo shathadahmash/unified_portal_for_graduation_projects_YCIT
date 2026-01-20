@@ -13,7 +13,6 @@ from django.http import JsonResponse
 from .models import (
     User, Group, GroupMembers, GroupSupervisors, GroupInvitation,
     Project, ApprovalRequest, Role, AcademicAffiliation,
-    Permission, RolePermission,
     GroupCreationRequest, GroupMemberApproval, NotificationLog, College, Department, UserRoles
 )
 from .serializers import (
@@ -24,7 +23,6 @@ from .serializers import (
     RoleSerializer, UserSerializer
 )
 from .serializers import UserRolesSerializer
-from .serializers import PermissionSerializer, RolePermissionSerializer
 from .permissions import PermissionManager
 from .utils import InvitationService, NotificationService
 from core.notification_manager import NotificationManager
@@ -311,8 +309,23 @@ class GroupViewSet(viewsets.ModelViewSet):
                         "email": m.user.email
                     },
                     "status": "accepted",
+                    "role": "student",
                     "created_at": None
                 } for m in members_list]
+
+                for s in supervisors_list:
+                    approvals_data.append({
+                        "id": s.id,
+                        "user_detail": {
+                            "id": s.user.id,
+                            "name": s.user.name or s.user.username,
+                            "username": s.user.username,
+                            "email": s.user.email
+                        },
+                        "status": "accepted",
+                        "role": "supervisor",  # ✅ أضيفي هذا للمشرفين
+                        "created_at": None
+                    })
 
                 return Response([{
                     "id": group_obj.group_id, # المعرف الأساسي للواجهة
@@ -388,45 +401,6 @@ class GroupViewSet(viewsets.ModelViewSet):
 
 # ============================================================================================
 # 2. ApprovalRequestViewSet
-# ============================================================================================
-
-class ApprovalRequestViewSet(viewsets.ModelViewSet):
-    queryset = ApprovalRequest.objects.all()
-    serializer_class = ApprovalRequestSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        if PermissionManager.is_admin(user):
-            return ApprovalRequest.objects.all()
-        return ApprovalRequest.objects.filter(
-            models.Q(requested_by=user) | models.Q(current_approver=user)
-        ).distinct()
-
-    @action(detail=True, methods=['post'])
-    def approve(self, request, pk=None):
-        approval_request = self.get_object()
-        user = request.user
-        if approval_request.current_approver != user:
-            return Response({"error": "ليس لديك صلاحية الموافقة على هذا الطلب"}, status=status.HTTP_403_FORBIDDEN)
-        approval_request.status = 'approved'
-        approval_request.approved_at = timezone.now()
-        approval_request.save()
-        return Response({"message": "تمت الموافقة على الطلب بنجاح"}, status=status.HTTP_200_OK)
-
-    @action(detail=True, methods=['post'])
-    def reject(self, request, pk=None):
-        approval_request = self.get_object()
-        user = request.user
-        if approval_request.current_approver != user:
-            return Response({"error": "ليس لديك صلاحية رفض هذا الطلب"}, status=status.HTTP_403_FORBIDDEN)
-        approval_request.status = 'rejected'
-        approval_request.comments = request.data.get('comments', approval_request.comments)
-        approval_request.save()
-        return Response({"message": "تم رفض الطلب بنجاح"}, status=status.HTTP_200_OK)
-
-
-# ============================================================================================
-# 3. GroupInvitationViewSet
 # ============================================================================================
 
 import json
@@ -563,23 +537,6 @@ class GroupInvitationViewSet(viewsets.ModelViewSet):
 
         result = InvitationService.reject_invitation(invitation, request.user)
         return Response(result)
-
-
-
-# ============================================================================================
-# 4. GroupMembersViewSet
-# ============================================================================================
-
-class GroupMembersViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = GroupMembers.objects.all()
-    serializer_class = GroupMembersSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        if PermissionManager.is_admin(user):
-            return GroupMembers.objects.all()
-        return GroupMembers.objects.filter(user=user)
-
 
 # ============================================================================================
 # 5. ProjectViewSet with filtering
@@ -852,49 +809,6 @@ class RoleViewSet(viewsets.ModelViewSet):
     serializer_class = RoleSerializer
     permission_classes = [IsAuthenticated]
 
-    @action(detail=True, methods=['get'])
-    def permissions(self, request, pk=None):
-        """Return list of permissions assigned to this role."""
-        perms = RolePermission.objects.filter(role_id=pk).select_related('permission')
-        permissions = [rp.permission for rp in perms]
-        serializer = PermissionSerializer(permissions, many=True)
-        return Response(serializer.data)
-
-
-class PermissionViewSet(viewsets.ModelViewSet):
-    """CRUD for Permission model."""
-    queryset = Permission.objects.all()
-    serializer_class = PermissionSerializer
-    permission_classes = [IsAuthenticated]
-
-
-class RolePermissionViewSet(viewsets.ModelViewSet):
-    """Assign/remove permissions to roles. Create uses get_or_create, destroy supports query params."""
-    queryset = RolePermission.objects.all()
-    serializer_class = RolePermissionSerializer
-    permission_classes = [IsAuthenticated]
-
-    def create(self, request, *args, **kwargs):
-        data = request.data
-        role_id = data.get('role') or data.get('role_id')
-        perm_id = data.get('permission') or data.get('permission_id')
-        if not role_id or not perm_id:
-            return Response({'detail': 'role and permission are required'}, status=400)
-        obj, created = RolePermission.objects.get_or_create(role_id=role_id, permission_id=perm_id)
-        serializer = self.get_serializer(obj)
-        return Response(serializer.data, status=201 if created else 200)
-
-    def destroy(self, request, *args, **kwargs):
-        role_id = request.query_params.get('role') or request.query_params.get('role_id')
-        perm_id = request.query_params.get('permission') or request.query_params.get('permission_id')
-        if role_id and perm_id:
-            qs = RolePermission.objects.filter(role_id=role_id, permission_id=perm_id)
-            deleted, _ = qs.delete()
-            if deleted:
-                return Response(status=204)
-            return Response({'detail': 'not found'}, status=404)
-        return super().destroy(request, *args, **kwargs)
-
 
 # ============================================================================================
 # 9. Users
@@ -979,6 +893,7 @@ def bulk_fetch(request):
 # ============================================================================================
 # 10. Group creation & approval APIs
 # ============================================================================================
+
 #    تبع نظام الاشعارات 
 
 from rest_framework.decorators import api_view
