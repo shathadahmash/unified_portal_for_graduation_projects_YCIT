@@ -793,16 +793,14 @@ class NotificationViewSet(viewsets.ModelViewSet): # غيرتها لـ ModelViewS
         return NotificationLog.objects.filter(recipient=self.request.user).order_by('-created_at')
 
     @action(detail=False, methods=['post'], url_path='mark-all-read')
-<<<<<<< HEAD
-    def mark_all_read(self, request):
-        #self.get_queryset().update(status='read')
-        #fatima modified the previous line to this 
-        self.get_queryset().update(is_read=True,read_at=timezone.now)
-=======
+    # def mark_all_read(self, request):
+    #     #self.get_queryset().update(status='read')
+    #     #fatima modified the previous line to this 
+    #     self.get_queryset().update(is_read=True,read_at=timezone.now)
+
     def mark_all_read(self, _request):
         # التعديل هنا: نغير الحقل الصحيح is_read
         self.get_queryset().update(is_read=True)
->>>>>>> master
         return Response({'status': 'success'})
         
     def destroy(self, _request, *args, **kwargs):
