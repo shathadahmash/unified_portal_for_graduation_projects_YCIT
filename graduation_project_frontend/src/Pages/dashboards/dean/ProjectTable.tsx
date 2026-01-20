@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { projectService, Project } from '../services/projectService';
-import { userService, User } from '../services/userService';
+import { projectService, Project } from '../../../services/projectService';
+import { userService, User } from '../../../services/userService';
 import { FiDownload, FiPlus, FiEdit3, FiTrash2 } from 'react-icons/fi';
-import { exportToCSV } from './tableUtils';
-import { containerClass, tableWrapperClass, tableClass, theadClass } from './tableStyles';
-import ProjectForm from '../Pages/dashboards/ProjectForm';
+import { exportToCSV } from '../../../components/tableUtils';
+import { containerClass, tableWrapperClass, tableClass, theadClass } from '../../../components/tableStyles';
+import ProjectForm from '../../../Pages/dashboards/ProjectForm';
+import { useAuthStore } from '../../../store/useStore';
 
 interface ProjectWithUsers extends Project {
   users?: User[]; // optional: users associated with this project
 }
 
 const ProjectsTable: React.FC = () => {
+  const { user } = useAuthStore();
   const [projects, setProjects] = useState<ProjectWithUsers[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -47,6 +49,10 @@ const ProjectsTable: React.FC = () => {
       const users = Array.isArray(bulk.users) ? bulk.users : [];
       const colleges = Array.isArray(bulk.colleges) ? bulk.colleges : [];
 
+      // Fetch departments for college relationship
+      const departments = await userService.getDepartments();
+      console.log('[ProjectsTable] departments fetched:', departments.length);
+
       console.log('[ProjectsTable] counts:', {
         projects: projectsRaw.length,
         groups: groups.length,
@@ -54,10 +60,12 @@ const ProjectsTable: React.FC = () => {
         groupSupervisors: groupSupervisors.length,
         users: users.length,
         colleges: colleges.length,
+        departments: departments.length,
       });
 
       const usersById = new Map<number, any>(users.map((u: any) => [u.id, u]));
       const collegesById = new Map<any, any>(colleges.map((c: any) => [c.cid, c.name_ar]));
+      const departmentsById = new Map<any, any>(departments.map((d: any) => [d.department_id, d]));
 
       const projectsWithUsers: ProjectWithUsers[] = projectsRaw.map((p: any) => {
         const relatedGroups = groups.filter((g: any) => g.project === p.project_id);
@@ -95,11 +103,30 @@ const ProjectsTable: React.FC = () => {
 
       console.log('[ProjectsTable] processed projects:', projectsWithUsers);
 
+      // Filter projects by dean's college using Group -> Department -> College relationship
+      const deanCollegeId = user?.college_id;
+      let filteredProjects = projectsWithUsers;
+      if (deanCollegeId) {
+        filteredProjects = projectsWithUsers.filter((p: any) => {
+          // Find the group for this project
+          const projectGroup = groups.find((g: any) => g.project === p.project_id);
+          if (!projectGroup || !projectGroup.department) return false;
+          
+          // Get the department for this group
+          const department = departmentsById.get(projectGroup.department);
+          if (!department) return false;
+          
+          // Check if department's college matches dean's college
+          return department.college === deanCollegeId;
+        });
+        console.log('[ProjectsTable] applied dean college filter (via Group->Department->College), kept:', filteredProjects.length, 'from', projectsWithUsers.length);
+      }
+
       // Client-side fallback for supervisor filter: if backend didn't filter, apply locally
       const supervisorFilter = paramsToSend?.supervisor || params?.supervisor;
       if (supervisorFilter) {
         const supIdStr = String(supervisorFilter);
-        const filtered = projectsWithUsers.filter((p: any) => {
+        const filtered = filteredProjects.filter((p: any) => {
           const relatedGroup = groups.find((g: any) => g.project === p.project_id);
           const groupId = relatedGroup ? relatedGroup.group_id : null;
           if (!groupId) return false;
@@ -108,7 +135,7 @@ const ProjectsTable: React.FC = () => {
         console.log('[ProjectsTable] applied client-side supervisor filter, kept:', filtered.length);
         setProjects(filtered);
       } else {
-        setProjects(projectsWithUsers);
+        setProjects(filteredProjects);
       }
     } catch (err) {
       console.error('[ProjectsTable] Failed to fetch projects:', err);
@@ -153,7 +180,7 @@ const ProjectsTable: React.FC = () => {
     // initial load
     fetchProjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   // auto-apply when filters (non-search) change. Search waits for Enter.
   React.useEffect(() => {

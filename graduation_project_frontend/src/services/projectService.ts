@@ -103,7 +103,7 @@ export const projectService = {
 
   async updateProject(projectId: number, payload: Partial<Project>) {
     try {
-      const response = await api.patch(`/projects/${projectId}/update_project/`, payload);
+      const response = await api.patch(`/projects/${projectId}/`, payload);
       return response.data;
     } catch (error) {
       console.error('Failed to update project:', error);
@@ -113,7 +113,7 @@ export const projectService = {
 
   async deleteProject(projectId: number) {
     try {
-      const response = await api.delete(`/projects/${projectId}/delete_project/`);
+      const response = await api.delete(`/projects/${projectId}/`);
       return response.data;
     } catch (error) {
       console.error('Failed to delete project:', error);
@@ -143,7 +143,7 @@ export const projectService = {
   async getProjectsWithGroups(fields?: string[]) {
     const req = [
       { table: 'projects', fields: fields || ['project_id', 'title', 'type', 'state', 'start_date', 'description', 'college'] },
-      { table: 'groups', fields: ['group_id', 'group_name', 'project'] },
+      { table: 'groups', fields: ['group_id', 'group_name', 'project', 'department'] },
       { table: 'group_members', fields: ['id', 'user', 'group'] },
       { table: 'group_supervisors', fields: ['id', 'user', 'group', 'type'] },
       { table: 'users', fields: ['id', 'first_name', 'last_name', 'name'] },

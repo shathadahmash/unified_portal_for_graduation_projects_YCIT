@@ -128,14 +128,14 @@ const RolesTable: React.FC = () => {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          <button onClick={() => exportToCSV('roles.csv', filteredRoles)} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">تصدير</button>
+          <button onClick={() => exportToCSV('roles.csv', filteredRoles)} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-600">تصدير</button>
         </div>
       </div>
 
       {/* Message Alert */}
       {message && (
         <div className={`mb-6 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${
-          message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'
+          message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-blue-600'
         }`}>
           {message.type === 'success' ? <FiCheck className="shrink-0" /> : <FiX className="shrink-0" />}
           <span className="text-sm font-bold">{message.text}</span>
@@ -145,22 +145,22 @@ const RolesTable: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Create Role Card */}
         <div className="lg:col-span-1">
-          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 sticky top-24">
-            <div className="w-14 h-14 bg-pink-50 text-pink-500 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-blue-100 sticky top-24">
+            <div className="w-14 h-14 bg-blue-600 text-blue-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
               <FiShield size={28} />
             </div>
-            <h3 className="text-xl font-black text-slate-800 mb-2">إضافة دور جديد</h3>
-            <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+            <h3 className="text-xl font-black text-blue-800 mb-2">إضافة دور جديد</h3>
+            <p className="text-blue-400 text-sm mb-6 leading-relaxed">
               قم بإدخال اسم الدور الجديد لإضافته إلى قائمة الأدوار المتاحة في النظام.
             </p>
             
             <div className="space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-black text-slate-400 uppercase mr-1">اسم الدور</label>
+                <label className="text-xs font-black text-blue-400 uppercase mr-1">اسم الدور</label>
                 <input
                   type="text"
                   placeholder="مثال: مدير، مشرف، طالب..."
-                  className="w-full border border-slate-200 px-4 py-3 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-slate-50 transition-all"
+                  className="w-full border border-blue-600 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-blue-600 transition-all"
                   value={newRoleName}
                   onChange={e => setNewRoleName(e.target.value)}
                 />
@@ -168,7 +168,7 @@ const RolesTable: React.FC = () => {
               <button
                 onClick={handleCreate}
                 disabled={isCreating || !newRoleName.trim()}
-                className="w-full bg-pink-500 hover:bg-pink-600 text-white px-6 py-3.5 rounded-xl font-black transition-all shadow-lg shadow-pink-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-3.5 rounded-xl font-black transition-all  flex items-center justify-center gap-2 disabled:opacity-100 disabled:shadow-none"
               >
                 {isCreating ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -181,9 +181,9 @@ const RolesTable: React.FC = () => {
               </button>
             </div>
 
-            <div className="mt-8 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex gap-3">
-              <FiInfo className="text-slate-400 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-slate-500 leading-relaxed">
+            <div className="mt-8 p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3">
+              <FiInfo className="text-blue-400 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-blue-500 leading-relaxed">
                 تأكد من اختيار أسماء أدوار واضحة ومميزة لتسهيل عملية إدارة الصلاحيات لاحقاً.
               </p>
             </div>
@@ -192,14 +192,14 @@ const RolesTable: React.FC = () => {
 
         {/* Roles Table Card */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+          <div className="bg-white rounded-[2rem] shadow-sm border border-blue-100 overflow-hidden">
             <div className={tableWrapperClass}>
               <table className={tableClass + ' text-right'}>
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-wider">المعرف (ID)</th>
-                    <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-wider">اسم الدور</th>
-                    <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-wider text-center">الإجراءات</th>
+                    <th className="px-8 py-5 text-xs font-black text-blue-50 uppercase tracking-wider">المعرف (ID)</th>
+                    <th className="px-8 py-5 text-xs font-black text-blue-50 uppercase tracking-wider">اسم الدور</th>
+                    <th className="px-8 py-5 text-xs font-black text-blue-50 uppercase tracking-wider text-center">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -231,7 +231,7 @@ const RolesTable: React.FC = () => {
                             </div>
                           ) : (
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-pink-50 text-pink-500 flex items-center justify-center font-black text-xs">
+                              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center font-black text-xs">
                                 {role.type[0].toUpperCase()}
                               </div>
                               <span className="text-sm font-black text-slate-800">{role.type}</span>

@@ -30,7 +30,11 @@ interface NewUser {
   roleId?: number;
 }
 
-const UsersTable: React.FC = () => {
+interface UsersTableProps {
+  initialRole?: string;
+}
+
+const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -51,7 +55,7 @@ const UsersTable: React.FC = () => {
 
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterRole, setFilterRole] = useState("");
+  const [filterRole, setFilterRole] = useState(initialRole || "");
   const [filterGender, setFilterGender] = useState("");
   const [filterStatus, setFilterStatus] = useState(""); // Active/Inactive
 
@@ -211,13 +215,13 @@ const UsersTable: React.FC = () => {
           <p className="text-slate-500 mt-1">عرض وتعديل بيانات المستخدمين في النظام</p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => exportToCSV('users.csv', filteredUsers)} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">تصدير</button>
+          <button onClick={() => exportToCSV('users.csv', filteredUsers)} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">تصدير</button>
           <button
             onClick={() => {
               setEditingUser(null);
               setShowCreateForm(!showCreateForm);
             }}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all font-bold flex items-center gap-2"
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-indigo-200 hover:bg-blue-700 transition-all font-bold flex items-center gap-2"
           >
             {showCreateForm ? <FiX /> : <FiUser />}
             {showCreateForm ? "إلغاء" : "إضافة مستخدم جديد"}

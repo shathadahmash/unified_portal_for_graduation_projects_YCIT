@@ -1,170 +1,7 @@
-// import React, { useEffect, useState } from 'react';
-// import { groupService } from '../services/groupService';
-// import { projectService } from '../services/projectService';
-
-// interface Group {
-//   id: number;
-//   group_name: string;
-//   project?: number | null;
-//   students?: { id: number; name: string }[];
-//   supervisors?: { id: number; name: string }[];
-//   co_supervisors?: { id: number; name: string }[];
-//   note?: string;
-// }
-
-// const GroupsTable: React.FC = () => {
-//   const [groups, setGroups] = useState<Group[]>([]);
-//   const [projectsMap, setProjectsMap] = useState<Record<number, string>>({});
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState<string | null>(null);
-
-//   /* ==========================
-//      Fetch Groups + Projects
-//   ========================== */
-//   useEffect(() => {
-//     const fetchData = async () => {
-//       try {
-//         setLoading(true);
-
-//         const [groupsData, projectsData] = await Promise.all([
-//           groupService.getGroups(),
-//           projectService.getProject()
-//         ]);
-
-//         // تأمين البيانات القادمة
-//         setGroups(Array.isArray(groupsData) ? groupsData : []);
-
-//         // Map المشاريع (project_id => title)
-//         const map: Record<number, string> = {};
-//         (projectsData || []).forEach((p: any) => {
-//           if (p?.project_id) {
-//             map[p.project_id] = p.title;
-//           }
-//         });
-//         setProjectsMap(map);
-//       } catch (err) {
-//         console.error(err);
-//         setError('فشل تحميل بيانات المجموعات');
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     fetchData();
-//   }, []);
-
-//   /* ==========================
-//      Delete Group (Soft delete)
-//   ========================== */
-//   const handleDelete = async (groupId: number) => {
-//     const confirmDelete = window.confirm('هل أنت متأكد من حذف هذه المجموعة؟');
-//     if (!confirmDelete) return;
-
-//     try {
-//       await groupService.updateGroup(groupId, { is_deleted: true });
-//       setGroups(prev => prev.filter(g => g.id !== groupId));
-//     } catch (err) {
-//       alert('فشل حذف المجموعة');
-//     }
-//   };
-
-//   /* ==========================
-//      UI States
-//   ========================== */
-//   if (loading) {
-//     return <div className="p-4 text-center">جاري تحميل المجموعات...</div>;
-//   }
-
-//   if (error) {
-//     return <div className="p-4 text-center text-red-600">{error}</div>;
-//   }
-
-//   if (groups.length === 0) {
-//     return <div className="p-4 text-center text-gray-500">لا توجد مجموعات</div>;
-//   }
-
-//   /* ==========================
-//      Render Table
-//   ========================== */
-//   return (
-//     <div className="p-4 overflow-x-auto">
-//       <table className="w-full border border-gray-200 rounded-lg">
-//         <thead className="bg-gray-100">
-//           <tr>
-//             <th className="p-2 border">#</th>
-//             <th className="p-2 border">اسم المجموعة</th>
-//             <th className="p-2 border">المشروع</th>
-//             <th className="p-2 border">الطلاب</th>
-//             <th className="p-2 border">المشرفون</th>
-//             <th className="p-2 border">المشرفون المساعدون</th>
-//             <th className="p-2 border">ملاحظات</th>
-//             <th className="p-2 border">الإجراءات</th>
-//           </tr>
-//         </thead>
-
-//         <tbody>
-//           {groups.map(group => (
-//             <tr key={group.id} className="hover:bg-gray-50">
-//               <td className="p-2 border text-center">{group.id}</td>
-
-//               <td className="p-2 border font-semibold">
-//                 {group.group_name || '—'}
-//               </td>
-
-//               <td className="p-2 border">
-//                 {group.project
-//                   ? projectsMap[group.project] || 'غير مرتبط'
-//                   : '—'}
-//               </td>
-
-//               <td className="p-2 border">
-//                 {(group.students ?? [])
-//                   .map(s => s.name)
-//                   .join(', ') || '—'}
-//               </td>
-
-//               <td className="p-2 border">
-//                 {(group.supervisors ?? [])
-//                   .map(s => s.name)
-//                   .join(', ') || '—'}
-//               </td>
-
-//               <td className="p-2 border">
-//                 {(group.co_supervisors ?? [])
-//                   .map(s => s.name)
-//                   .join(', ') || '—'}
-//               </td>
-
-//               <td className="p-2 border">
-//                 {group.note || '—'}
-//               </td>
-
-//               <td className="p-2 border text-center space-x-2 space-x-reverse">
-//                 <button
-//                   className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-//                   onClick={() => alert(`Edit group ${group.id}`)}
-//                 >
-//                   تعديل
-//                 </button>
-
-//                 <button
-//                   className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
-//                   onClick={() => handleDelete(group.id)}
-//                 >
-//                   حذف
-//                 </button>
-//               </td>
-//             </tr>
-//           ))}
-//         </tbody>
-//       </table>
-//     </div>
-//   );
-// };
-
-// export default GroupsTable;
 import React, { useEffect, useState, useMemo } from "react";
 import { groupService } from "../services/groupService";
+import { projectService } from '../services/projectService';
+import { exportToCSV } from './tableUtils';
 import { 
   FiSearch, 
   FiFilter, 
@@ -180,6 +17,18 @@ import {
   FiEdit3
 } from "react-icons/fi";
 import { containerClass, tableWrapperClass, tableClass, theadClass } from './tableStyles';
+import GroupForm from '../Pages/dashboards/GroupForm';
+
+interface GroupMember {
+  user: number;
+  user_detail?: { id?: number; name?: string; username?: string };
+}
+
+interface GroupSupervisor {
+  user: number;
+  type?: string;
+  user_detail?: { id?: number; name?: string };
+}
 
 interface Group {
   group_id: number;
@@ -188,13 +37,19 @@ interface Group {
   department?: { name: string };
   program?: { p_name: string };
   pattern?: { name: string };
-  project?: { title: string };
-  created_at: string;
+  project?: number | { project_id?: number; title?: string } | null;
+  project_detail?: { project_id?: number; title?: string } | null;
+  members?: GroupMember[];
+  supervisors?: GroupSupervisor[];
+  created_at?: string;
 }
 
 const GroupsTable: React.FC = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [projectsMap, setProjectsMap] = useState<Record<number, any>>({});
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
@@ -213,6 +68,31 @@ const GroupsTable: React.FC = () => {
       setLoading(true);
       const data = await groupService.getGroups();
       setGroups(data);
+      // fetch project details for any referenced project ids
+      const projectIds = Array.from(new Set(
+        data
+          .map((g: any) => {
+            if (!g) return null;
+            if (typeof g.project === 'number') return g.project;
+            if (g.project && typeof g.project === 'object') return g.project.project_id || g.project.id;
+            if (g.project_detail && g.project_detail.project_id) return g.project_detail.project_id;
+            return null;
+          })
+          .filter(Boolean)
+      ));
+
+      if (projectIds.length > 0) {
+        const fetched: Record<number, any> = {};
+        await Promise.all(projectIds.map(async (pid: number) => {
+          try {
+            const p = await projectService.getProjectById(pid);
+            if (p && p.project_id) fetched[p.project_id] = p;
+          } catch (e) {
+            // ignore
+          }
+        }));
+        setProjectsMap(fetched);
+      }
     } catch (err) {
       console.error("❌ Error fetching groups:", err);
     } finally {
@@ -270,12 +150,13 @@ const GroupsTable: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => exportToCSV('groups.csv', filteredGroups)}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-semibold"
+            className="bg-blue-50 text-black px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold"
           >
             تصدير
           </button>
           <button
-            className="bg-purple-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all font-bold flex items-center gap-2"
+            onClick={() => { setEditingGroup(null); setShowGroupForm(true); }}
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all font-bold flex items-center gap-2"
           >
             <FiPlus />
             <span>إنشاء مجموعة جديدة</span>
@@ -295,7 +176,7 @@ const GroupsTable: React.FC = () => {
                 placeholder="اسم المجموعة، المشروع، البرنامج..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all text-sm"
+                className="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
               />
             </div>
           </div>
@@ -305,7 +186,7 @@ const GroupsTable: React.FC = () => {
             <select
               value={filterDepartment}
               onChange={(e) => setFilterDepartment(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm cursor-pointer appearance-none"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm cursor-pointer appearance-none"
             >
               <option value="">جميع الأقسام</option>
               {departments.map((dept, i) => (
@@ -319,7 +200,7 @@ const GroupsTable: React.FC = () => {
             <select
               value={filterYear}
               onChange={(e) => setFilterYear(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition-all text-sm cursor-pointer appearance-none"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm cursor-pointer appearance-none"
             >
               <option value="">جميع السنوات</option>
               {academicYears.map((year, i) => (
@@ -348,6 +229,8 @@ const GroupsTable: React.FC = () => {
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">المجموعة</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">الأعضاء</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">المشرفون</th>
                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">البرنامج والقسم</th>
                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">المشروع المرتبط</th>
                 <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">السنة الأكاديمية</th>
@@ -357,9 +240,9 @@ const GroupsTable: React.FC = () => {
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center">
+                  <td colSpan={7} className="px-6 py-10 text-center">
                     <div className="flex justify-center items-center gap-2 text-slate-400">
-                      <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                       <span>جاري تحميل البيانات...</span>
                     </div>
                   </td>
@@ -369,7 +252,7 @@ const GroupsTable: React.FC = () => {
                   <tr key={group.group_id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-black text-sm">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-sm">
                           <FiUsers />
                         </div>
                         <div className="flex flex-col">
@@ -377,6 +260,27 @@ const GroupsTable: React.FC = () => {
                           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">ID: #{group.group_id}</span>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col gap-1">
+                        {(group.members && group.members.length > 0) ? (
+                          group.members.map((m, idx) => (
+                            <div key={idx} className="text-sm text-slate-700 font-bold">{m.user_detail?.name || m.user_detail?.username || `#${m.user}`}</div>
+                          ))
+                        ) : (
+                          <div className="text-sm text-slate-500">لا يوجد أعضاء</div>
+                        )}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-5">
+                      {(group.supervisors && group.supervisors.length > 0) ? (
+                        group.supervisors.map((s, idx) => (
+                          <div key={idx} className="text-sm text-slate-700 font-bold">{s.user_detail?.name || `#${s.user}`}</div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-slate-500">لا يوجد مشرفون</div>
+                      )}
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col gap-1">
@@ -392,10 +296,17 @@ const GroupsTable: React.FC = () => {
                     </td>
                     <td className="px-6 py-5">
                       <div className="max-w-[200px]">
-                        <p className="text-xs font-bold text-slate-800 truncate" title={group.project?.title}>
-                          {group.project?.title || "لم يتم تعيين مشروع"}
+                        <p className="text-xs font-bold text-slate-800 truncate" title={typeof group.project === 'object' ? (group.project?.title || group.project_detail?.title) : undefined}>
+                          {(() => {
+                            if (!group.project) return 'لم يتم تعيين مشروع';
+                            if (typeof group.project === 'object') return group.project.title || group.project_detail?.title || 'لم يتم تعيين مشروع';
+                            const pid = Number(group.project);
+                            if (projectsMap[pid]) return projectsMap[pid].title;
+                            if (group.project_detail && group.project_detail.title) return group.project_detail.title;
+                            return 'لم يتم تعيين مشروع';
+                          })()}
                         </p>
-                        <span className="text-[10px] text-purple-500 font-black uppercase">
+                        <span className="text-[10px] text-blue-500 font-black uppercase">
                           {group.pattern?.name || "النمط الافتراضي"}
                         </span>
                       </div>
@@ -408,10 +319,10 @@ const GroupsTable: React.FC = () => {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all">
+                        <button onClick={() => { setEditingGroup(group); setShowGroupForm(true); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
                           <FiEdit3 size={18} />
                         </button>
-                        <button className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                        <button onClick={() => { setEditingGroup(group); setShowGroupForm(true); }} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
                           <FiTrash2 size={18} />
                         </button>
                         <button className="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all">
@@ -423,11 +334,11 @@ const GroupsTable: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center">
+                  <td colSpan={7} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center gap-3 text-slate-400">
                       <FiSearch size={40} className="opacity-20" />
                       <p className="font-bold">لم يتم العثور على مجموعات تطابق البحث</p>
-                      <button onClick={clearFilters} className="text-purple-600 text-sm underline">إعادة ضبط الفلاتر</button>
+                      <button onClick={clearFilters} className="text-blue-600 text-sm underline">إعادة ضبط الفلاتر</button>
                     </div>
                   </td>
                 </tr>
@@ -462,6 +373,15 @@ const GroupsTable: React.FC = () => {
           </div>
         )}
       </div>
+      {showGroupForm && (
+        <GroupForm
+          isOpen={showGroupForm}
+          initialData={editingGroup || undefined}
+          mode={editingGroup ? 'edit' : 'create'}
+          onClose={() => { setShowGroupForm(false); setEditingGroup(null); }}
+          onSuccess={() => { setShowGroupForm(false); setEditingGroup(null); fetchGroups(); }}
+        />
+      )}
     </div>
   );
 };
