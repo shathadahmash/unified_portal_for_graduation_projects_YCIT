@@ -36,6 +36,7 @@ const TeamStatusPage = ({ myGroup, onNavigateToAdd }: any) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {group.approvals?.map((member: any) => {
                   // توحيد فحص الحالة بناءً على الـ Choices في Django
+                  console.log("البيانات القادمة من السيرفر للعضو:", member);
                   const isApproved = member.status === 'accepted';
                   const isRejected = member.status === 'rejected';
 
@@ -51,7 +52,7 @@ const TeamStatusPage = ({ myGroup, onNavigateToAdd }: any) => {
                         <div>
                           <p className="font-black text-slate-800">
                             {/* استخدام الحقل 'name' الذي أضفناه في الـ Serializer */}
-                            {member.name || "عضو مدعو"}
+                            {member.user_detail?.name||member.name || "عضو مدعو"}
                           </p>
                           <p className="text-xs text-slate-400 font-bold">
                             {member.role === 'student' ? 'طالب' : 

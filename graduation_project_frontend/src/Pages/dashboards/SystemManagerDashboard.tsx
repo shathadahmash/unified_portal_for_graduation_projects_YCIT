@@ -25,7 +25,6 @@ import NotificationsPanel from '../../components/NotificationsPanel';
 import UsersTable from '../../components/UsersTable';
 import RolesTable from '../../components/RolesTable';
 import GroupsTable from '../../components/GroupsTable';
-import PermissionsTable from '../../components/permissions';
 import UsersReport from '../../components/UsersReport';
 import ProjectReport from '../../components/ProjectReport';
 import GroupsReport from '../../components/GroupsReport';
@@ -117,15 +116,6 @@ const SystemManagerDashboard: React.FC = () => {
         color: 'purple',
         gradient: 'from-purple-500 to-purple-600',
         description: 'إدارة مجموعات الطلاب والفرق'
-      },
-        {
-        id: 'permissions',
-        title: 'الصلاحيات',
-        value: groups.length,
-        icon: <FiUsers />,
-        color: 'purple',
-        gradient: 'from-purple-500 to-purple-600',
-        description: 'إدارة صلاحيات النظام'
       }
     ];
   }, [users, roles, projects, groups]);
@@ -137,7 +127,7 @@ const SystemManagerDashboard: React.FC = () => {
     if (!activeCardPanel || !showManagementContent) return null;
 
     return (
-      <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {activeCardPanel === 'المستخدمون' && <UsersTable />}
         {activeCardPanel === 'الأدوار' && <RolesTable />}
         {activeCardPanel === 'المجموعات' && <GroupsTable />}
@@ -146,7 +136,6 @@ const SystemManagerDashboard: React.FC = () => {
             <ProjectsTable />
           </div>
         )}
-        {activeCardPanel ==="الصلاحيات" && <PermissionsTable />}
       </div>
     );
   };
