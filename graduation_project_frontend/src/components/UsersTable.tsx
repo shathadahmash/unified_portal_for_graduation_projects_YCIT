@@ -32,9 +32,11 @@ interface NewUser {
 
 interface UsersTableProps {
   initialRole?: string;
+  departmentId?: number | null; // optional: limit users to a specific department
+  onlyRoles?: string[]; // optional: if provided, only users having one of these roles will be shown
 }
 
-const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
+const UsersTable: React.FC<UsersTableProps> = ({ initialRole, departmentId, onlyRoles }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -88,6 +90,15 @@ const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
   // Filtered users logic
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
+      // department filter: if departmentId provided, only include users from that department
+      const matchesDepartment = typeof departmentId === 'undefined' || departmentId === null ? true : (user.department_id === departmentId);
+      // onlyRoles filter: if provided, only include users that have one of the listed roles (case-insensitive)
+      const matchesOnlyRoles = (() => {
+        if (!onlyRoles || onlyRoles.length === 0) return true;
+        const allowed = onlyRoles.map(s => s.toLowerCase());
+        return !!user.roles?.some(r => allowed.includes((r.type || '').toLowerCase()));
+      })();
+
       const matchesSearch = 
         (user.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (user.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -99,9 +110,9 @@ const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
       const matchesStatus = filterStatus === "" || 
         (filterStatus === "Active" ? user.is_active : !user.is_active);
 
-      return matchesSearch && matchesRole && matchesGender && matchesStatus;
+      return matchesSearch && matchesRole && matchesGender && matchesStatus && matchesDepartment && matchesOnlyRoles;
     });
-  }, [users, searchTerm, filterRole, filterGender, filterStatus]);
+  }, [users, searchTerm, filterRole, filterGender, filterStatus, departmentId, onlyRoles]);
 
   // Paginated users
   const paginatedUsers = filteredUsers.slice(0, visibleRows);
@@ -123,7 +134,8 @@ const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
       };
 
       const createdUser = await userService.createUser(payload as any);
-      if (roleId) {
+      // if this table is restricted to department head (onlyRoles provided), do not manage roles here
+      if (!onlyRoles && roleId) {
         await userService.assignRoleToUser(createdUser.id, roleId);
       }
 
@@ -157,14 +169,17 @@ const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
       
       await userService.updateUser(editingUser.id, updatedData);
 
-      const currentRoleId = editingUser.roles?.[0]?.id;
-      const newRoleId = editingUser.roleId;
+      // Only allow role changes when not restricted by department head view
+      if (!onlyRoles) {
+        const currentRoleId = editingUser.roles?.[0]?.id;
+        const newRoleId = editingUser.roleId;
 
-      if (newRoleId && newRoleId !== currentRoleId) {
-        if (currentRoleId) {
-          await userService.removeRoleFromUser(editingUser.id, currentRoleId);
+        if (newRoleId && newRoleId !== currentRoleId) {
+          if (currentRoleId) {
+            await userService.removeRoleFromUser(editingUser.id, currentRoleId);
+          }
+          await userService.assignRoleToUser(editingUser.id, newRoleId);
         }
-        await userService.assignRoleToUser(editingUser.id, newRoleId);
       }
 
       setEditingUser(null);
@@ -207,6 +222,12 @@ const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const getPrimaryRoleLabel = (user: User) => {
+    const r = user.roles && user.roles[0];
+    if (!r) return 'بدون دور';
+    return (r.type || (r as any).role__type || (r as any).role_type || 'بدون دور');
+  };
+
   return (
     <div className={containerClass}>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -215,13 +236,13 @@ const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
           <p className="text-slate-500 mt-1">عرض وتعديل بيانات المستخدمين في النظام</p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => exportToCSV('users.csv', filteredUsers)} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">تصدير</button>
+          <button onClick={() => exportToCSV('users.csv', filteredUsers)} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">تصدير</button>
           <button
             onClick={() => {
               setEditingUser(null);
               setShowCreateForm(!showCreateForm);
             }}
-            className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-indigo-200 hover:bg-blue-700 transition-all font-bold flex items-center gap-2"
+            className="bg-indigo-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all font-bold flex items-center gap-2"
           >
             {showCreateForm ? <FiX /> : <FiUser />}
             {showCreateForm ? "إلغاء" : "إضافة مستخدم جديد"}
@@ -246,7 +267,8 @@ const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
             </div>
           </div>
 
-          <div>
+          {!onlyRoles && (
+            <div>
             <label className="block text-xs font-black text-slate-400 uppercase mb-2 mr-1">الدور الوظيفي</label>
             <select
               value={filterRole}
@@ -259,6 +281,7 @@ const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
               ))}
             </select>
           </div>
+          )}
 
           <div>
             <label className="block text-xs font-black text-slate-400 uppercase mb-2 mr-1">الجنس</label>
@@ -345,6 +368,7 @@ const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
                 <option value="Other">أخرى</option>
               </select>
             </div>
+            {!onlyRoles && (
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-500 mr-1">الدور</label>
               <select 
@@ -358,6 +382,7 @@ const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
                 ))}
               </select>
             </div>
+            )}
             {editingUser && (
               <div className="flex items-center gap-2 pt-6">
                 <input 
@@ -438,9 +463,9 @@ const UsersTable: React.FC<UsersTableProps> = ({ initialRole }) => {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                            user.roles?.[0]?.type === 'Admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                            getPrimaryRoleLabel(user) === 'Admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {user.roles?.[0]?.type || "بدون دور"}
+                            {getPrimaryRoleLabel(user)}
                           </span>
                         </div>
                       </div>

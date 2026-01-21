@@ -121,6 +121,8 @@ const GroupForm: React.FC<GroupFormProps> = ({ isOpen, onClose, onSuccess, initi
       supervisor_ids: selectedSupervisors.map(s => s.id),
       co_supervisor_ids: selectedCoSupervisors.map(s => s.id),
       // ملاحظة: تم استبعاد بيانات المشروع بناءً على التعديل الجديد
+      // Default project_type to avoid backend validation failure when not providing project
+      project_type: 'PrivateCompany',
     };
 
     try {

@@ -79,6 +79,11 @@ export const userService = {
 
   async getAllUsers(): Promise<User[]> {
     const response = await api.get("/users/");
+    try {
+      console.log('[userService] getAllUsers response', Array.isArray(response.data) ? response.data.length : typeof response.data, response.data?.slice ? response.data.slice(0,3) : response.data);
+    } catch (e) {
+      console.warn('[userService] getAllUsers logging failed', e);
+    }
     return response.data.map(normalizeUser);
   },
 

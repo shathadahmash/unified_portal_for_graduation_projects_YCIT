@@ -44,13 +44,9 @@ const DepartmentHeadDashboard: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/groups/department-stats/', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        const data = await response.json();
-        setStats(data);
+        const res = await (await import('../../services/api')).default.get('groups/department-stats/');
+        console.log('[DepartmentHead] department-stats response', res.data);
+        setStats(res.data);
       } catch (error) {
         console.error("Error fetching stats:", error);
       }
