@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { projectService, Project } from '../services/projectService';
 import { userService, User } from '../services/userService';
-import { FiDownload } from 'react-icons/fi';
+import { FiDownload, FiPlus, FiEdit3, FiTrash2 } from 'react-icons/fi';
 import { exportToCSV } from './tableUtils';
 import { containerClass, tableWrapperClass, tableClass, theadClass } from './tableStyles';
+import ProjectForm from '../Pages/dashboards/ProjectForm';
+import { useAuthStore } from '../store/useStore';
 
 interface ProjectWithUsers extends Project {
   users?: User[]; // optional: users associated with this project
 }
 
 const ProjectsTable: React.FC = () => {
+  const { user } = useAuthStore();
   const [projects, setProjects] = useState<ProjectWithUsers[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -20,6 +23,9 @@ const ProjectsTable: React.FC = () => {
   const [yearInput, setYearInput] = useState('');
   const [typeInput, setTypeInput] = useState('');
   const [stateInput, setStateInput] = useState('');
+
+  const [showProjectForm, setShowProjectForm] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectWithUsers | null>(null);
 
   // fetchProjects moved to component scope so filters can call it
   const fetchProjects = async (params?: any) => {
@@ -42,6 +48,11 @@ const ProjectsTable: React.FC = () => {
       const groupSupervisors = Array.isArray(bulk.group_supervisors) ? bulk.group_supervisors : [];
       const users = Array.isArray(bulk.users) ? bulk.users : [];
       const colleges = Array.isArray(bulk.colleges) ? bulk.colleges : [];
+      const departments = Array.isArray(bulk.departments) ? bulk.departments : [];
+
+      // Fetch departments for college relationship (dean version approach)
+      const departmentsExtra = await userService.getDepartments();
+      console.log('[ProjectsTable] departments fetched:', departmentsExtra.length);
 
       console.log('[ProjectsTable] counts:', {
         projects: projectsRaw.length,
@@ -50,10 +61,12 @@ const ProjectsTable: React.FC = () => {
         groupSupervisors: groupSupervisors.length,
         users: users.length,
         colleges: colleges.length,
+        departments: departments.length,
       });
 
       const usersById = new Map<number, any>(users.map((u: any) => [u.id, u]));
       const collegesById = new Map<any, any>(colleges.map((c: any) => [c.cid, c.name_ar]));
+      const departmentsById = new Map<any, any>(departmentsExtra.map((d: any) => [d.department_id, d]));
 
       const projectsWithUsers: ProjectWithUsers[] = projectsRaw.map((p: any) => {
         const relatedGroups = groups.filter((g: any) => g.project === p.project_id);
@@ -76,25 +89,53 @@ const ProjectsTable: React.FC = () => {
         const supervisorUser = supRows.length ? usersById.get(supRows[0].user) : null;
         const coSupervisorUser = coSupRows.length ? usersById.get(coSupRows[0].user) : null;
 
-        const collegeName = collegesById.get(p.college) || p.college || '-';
+        // Get department from group
+        const department = mainGroup && mainGroup.department ? departmentsById.get(mainGroup.department) : null;
+        const departmentName = department ? department.name || '-' : '-';
+
+        // Get college from department's college relationship, fallback to project's college
+        const collegeName = department ? 
+          (collegesById.get(department.college) || '-') : 
+          (collegesById.get(p.college) || p.college || '-');
 
         return {
           ...p,
           users: students,
+          group_id: groupId,
           group_name: mainGroup ? mainGroup.group_name : null,
           supervisor: supervisorUser ? { ...supervisorUser, name: supervisorUser.name || `${supervisorUser.first_name || ''} ${supervisorUser.last_name || ''}`.trim() } : null,
           co_supervisor: coSupervisorUser ? { ...coSupervisorUser, name: coSupervisorUser.name || `${coSupervisorUser.first_name || ''} ${coSupervisorUser.last_name || ''}`.trim() } : null,
           college_name: collegeName,
+          department_name: departmentName,
         };
       });
 
       console.log('[ProjectsTable] processed projects:', projectsWithUsers);
 
+      // Filter projects by dean's college using Group -> Department -> College relationship
+      const deanCollegeId = user?.college_id;
+      let filteredProjects = projectsWithUsers;
+      if (deanCollegeId) {
+        filteredProjects = projectsWithUsers.filter((p: any) => {
+          // Find the group for this project
+          const projectGroup = groups.find((g: any) => g.project === p.project_id);
+          if (!projectGroup || !projectGroup.department) return false;
+          
+          // Get the department for this group
+          const department = departmentsById.get(projectGroup.department);
+          if (!department) return false;
+          
+          // Check if department's college matches dean's college
+          return department.college === deanCollegeId;
+        });
+        console.log('[ProjectsTable] applied dean college filter (via Group->Department->College), kept:', filteredProjects.length, 'from', projectsWithUsers.length);
+      }
+
       // Client-side fallback for supervisor filter: if backend didn't filter, apply locally
       const supervisorFilter = paramsToSend?.supervisor || params?.supervisor;
       if (supervisorFilter) {
         const supIdStr = String(supervisorFilter);
-        const filtered = projectsWithUsers.filter((p: any) => {
+        const filtered = filteredProjects.filter((p: any) => {
           const relatedGroup = groups.find((g: any) => g.project === p.project_id);
           const groupId = relatedGroup ? relatedGroup.group_id : null;
           if (!groupId) return false;
@@ -103,7 +144,7 @@ const ProjectsTable: React.FC = () => {
         console.log('[ProjectsTable] applied client-side supervisor filter, kept:', filtered.length);
         setProjects(filtered);
       } else {
-        setProjects(projectsWithUsers);
+        setProjects(filteredProjects);
       }
     } catch (err) {
       console.error('[ProjectsTable] Failed to fetch projects:', err);
@@ -148,7 +189,7 @@ const ProjectsTable: React.FC = () => {
     // initial load
     fetchProjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   // auto-apply when filters (non-search) change. Search waits for Enter.
   React.useEffect(() => {
@@ -179,12 +220,46 @@ const ProjectsTable: React.FC = () => {
     fetchProjects();
   };
 
+  const handleDeleteProject = async (projectId: number) => {
+    if (!confirm('هل أنت متأكد من حذف هذا المشروع؟ هذا الإجراء لا يمكن التراجع عنه.')) return;
+    try {
+      await projectService.deleteProject(projectId);
+      alert('تم حذف المشروع بنجاح');
+      fetchProjects(); // Refresh the list
+    } catch (err: any) {
+      console.error('Failed to delete project:', err);
+      const errorMessage = err?.response?.data?.error || err?.response?.data?.detail || err?.message || 'خطأ غير معروف';
+      alert(`فشل في حذف المشروع: ${errorMessage}`);
+    }
+  };
+
   if (loading) return <div className="p-6 text-center">Loading projects...</div>;
 
   if (projects.length === 0) return <div className="p-6 text-center">لا توجد مشاريع</div>;
 
   return (
     <div className={containerClass}>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-slate-800">إدارة المشاريع</h1>
+          <p className="text-slate-500 mt-1">تنظيم ومتابعة المشاريع الأكاديمية والتخرج</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => exportToCSV('projects.csv', projects)}
+            className="bg-blue-50 text-black px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold"
+          >
+            تصدير
+          </button>
+          <button
+            onClick={() => { setEditingProject(null); setShowProjectForm(true); }}
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all font-bold flex items-center gap-2"
+          >
+            <FiPlus />
+            <span>إنشاء مشروع جديد</span>
+          </button>
+        </div>
+      </div>
       <div className="mb-4">
         <div className="bg-white rounded-lg shadow-sm border p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
@@ -343,9 +418,11 @@ const ProjectsTable: React.FC = () => {
             <th className="px-4 py-2 text-right">اسم المجموعة</th>
             <th className="px-4 py-2 text-right">المشرف المشارك</th>
             <th className="px-4 py-2 text-right">الكلية</th>
+            <th className="px-4 py-2 text-right">القسم</th>
             <th className="px-4 py-2 text-right">السنة</th>
             <th className="px-4 py-2 text-right">المستخدمون</th>
             <th className="px-4 py-2 text-center">ملف المشروع</th>
+            <th className="px-4 py-2 text-center">الإجراءات</th>
           </tr>
         </thead>
         <tbody>
@@ -359,6 +436,7 @@ const ProjectsTable: React.FC = () => {
               <td className="px-4 py-2 text-right">{(proj as any).group_name || '-'}</td>
               <td className="px-4 py-2 text-right">{proj.co_supervisor?.name || '-'}</td>
               <td className="px-4 py-2 text-right">{(proj as any).college_name || '-'}</td>
+              <td className="px-4 py-2 text-right">{(proj as any).department_name || '-'}</td>
               <td className="px-4 py-2 text-right">{proj.start_date ? new Date(proj.start_date).getFullYear() : '-'}</td>
               <td className="px-4 py-2 text-right">
                 {proj.users?.length ? proj.users.map((u: any) => u.displayName || u.name).join(', ') : '-'}
@@ -371,11 +449,36 @@ const ProjectsTable: React.FC = () => {
                   <FiDownload /> تنزيل
                 </button>
               </td>
+              <td className="px-4 py-2 text-center">
+                <button
+                  onClick={() => { setEditingProject(proj); setShowProjectForm(true); }}
+                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all mr-2"
+                  title="تعديل"
+                >
+                  <FiEdit3 size={18} />
+                </button>
+                <button
+                  onClick={() => handleDeleteProject(proj.project_id)}
+                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                  title="حذف"
+                >
+                  <FiTrash2 size={18} />
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+    {showProjectForm && (
+      <ProjectForm
+        isOpen={showProjectForm}
+        initialData={editingProject || undefined}
+        mode={editingProject ? 'edit' : 'create'}
+        onClose={() => { setShowProjectForm(false); setEditingProject(null); }}
+        onSuccess={() => { setShowProjectForm(false); setEditingProject(null); fetchProjects(); }}
+      />
+    )}
   </div>
   );
 };

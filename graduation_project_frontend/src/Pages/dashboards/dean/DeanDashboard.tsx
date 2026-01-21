@@ -13,12 +13,12 @@ import ProjectSearch from '../ProjectSearch';
 import ProjectSelectionPage from '../ProjectSelectionPage';
 import NotificationsPanel from '../../../components/NotificationsPanel'; 
 import { useNotifications } from '../../../hooks/useNotifications'; 
-import CoSupervisorsTable from '../../../components/CoSupervisorsTable';
-import SupervisorsTable from '../../../components/SupervisorsTable';
-import ProjectTable from '../../../components/ProjectTable';
-import ProjectReportPage from '../../../components/ProjectReportPage';
-import SupervisorsReportPage from '../../../components/SupervisorsReportPage';
-import CoSupervisorsReportPage from '../../../components/CoSupervisorsReportPage';
+import CoSupervisorsTable from './CoSupervisorsTable';
+import SupervisorsTable from './SupervisorsTable';
+import ProjectTable from './ProjectTable';
+import ProjectReportPage from './ProjectReportPage';
+import SupervisorsReportPage from './SupervisorsReportPage';
+import CoSupervisorsReportPage from './CoSupervisorsReportPage';
 
 const DeanDashboard: React.FC = () => {
   const { user } = useAuthStore();
@@ -276,7 +276,7 @@ const DeanDashboard: React.FC = () => {
               {/* Welcome Section */}
               <div className="hero-blue p-10 text-white relative overflow-hidden">
                 <div className="relative z-10">
-                  <h1 className="text-3xl font-black mb-3">مرحباً {user?.name || 'العميد'} 👋</h1>
+                  <h1 className="text-3xl font-black mb-3">مرحباً {user?.name || 'العميد'} </h1>
                   <p className="text-primary-50 max-w-xl leading-relaxed font-medium">
                     نظرة سريعة على حالة الكلية اليوم.
                   </p>

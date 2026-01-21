@@ -688,8 +688,36 @@ class ProjectViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['delete'])
     def delete_project(self, request, pk=None):
         project = self.get_object()
-        if project.created_by != request.user:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Check if user has delete permission or is the project creator
+        from .permissions import PermissionManager
+        user_can_delete = False
+
+        # User can delete if they have the permission
+        if PermissionManager.has_permission(request.user, 'delete_project'):
+            user_can_delete = True
+        # Or if they are the project creator
+        elif project.created_by == request.user:
+            user_can_delete = True
+        # Or if they are a dean/admin and the project belongs to their college
+        elif PermissionManager.is_admin(request.user):
+            # Get user's college from their affiliation
+            user_affiliation = request.user.academicaffiliation_set.order_by('-start_date').first()
+            if user_affiliation and user_affiliation.college:
+                # Check if project belongs to dean's college (via groups/departments)
+                from .models import Group
+                project_groups = Group.objects.filter(project=project)
+                for group in project_groups:
+                    if group.department and group.department.college == user_affiliation.college:
+                        user_can_delete = True
+                        break
+                # Also check direct project college if no groups found
+                if not user_can_delete and project.college == user_affiliation.college:
+                    user_can_delete = True
+
+        if not user_can_delete:
+            return Response({'error': 'Unauthorized - You do not have permission to delete this project'}, status=status.HTTP_403_FORBIDDEN)
+
         project.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -750,16 +778,11 @@ class NotificationViewSet(viewsets.ModelViewSet): # غيرتها لـ ModelViewS
         return NotificationLog.objects.filter(recipient=self.request.user).order_by('-created_at')
 
     @action(detail=False, methods=['post'], url_path='mark-all-read')
-<<<<<<< HEAD
-    def mark_all_read(self, request):
-        #self.get_queryset().update(status='read')
-        #fatima modified the previous line to this 
-        self.get_queryset().update(is_read=True,read_at=timezone.now)
-=======
+
     def mark_all_read(self, _request):
         # التعديل هنا: نغير الحقل الصحيح is_read
         self.get_queryset().update(is_read=True)
->>>>>>> master
+
         return Response({'status': 'success'})
         
     def destroy(self, _request, *args, **kwargs):

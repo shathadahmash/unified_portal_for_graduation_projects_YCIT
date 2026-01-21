@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useNotificationsStore } from '../../store/useStore';
+import { useNotificationsStore } from '../../../store/useStore';
 import {
   FiUsers,
   FiLayers,
@@ -16,19 +16,19 @@ import {
   FiActivity
 } from 'react-icons/fi';
 
-import { userService } from '../../services/userService';
-import { roleService } from '../../services/roleService';
-import { projectService } from '../../services/projectService';
-import { groupService } from '../../services/groupService';
+import { userService } from '../../../services/userService';
+import { roleService } from '../../../services/roleService';
+import { projectService } from '../../../services/projectService';
+import { groupService } from '../../../services/groupService';
 
-import NotificationsPanel from '../../components/NotificationsPanel';
-import UsersTable from '../../components/UsersTable';
-import RolesTable from '../../components/RolesTable';
-import GroupsTable from '../../components/GroupsTable';
-import UsersReport from '../../components/UsersReport';
-import ProjectReport from '../../components/ProjectReport';
-import GroupsReport from '../../components/GroupsReport';
-import ProjectsTable from '../../components/ProjectTable';
+import NotificationsPanel from '../../../components/NotificationsPanel';
+import UsersTable from '../../../components/UsersTable';
+import RolesTable from '../../../components/RolesTable';
+import GroupsTable from '../../../components/GroupsTable';
+import UsersReport from '../../../components/UsersReport';
+import ProjectReport from '../../../components/ProjectReport';
+import GroupsReport from '../../../components/GroupsReport';
+import ProjectsTable from '../../../components/ProjectTable';
 
 const SystemManagerDashboard: React.FC = () => {
   const { unreadCount } = useNotificationsStore();
@@ -275,11 +275,11 @@ const SystemManagerDashboard: React.FC = () => {
         {/* Main Scrollable Content */}
         <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
           {activeTab === 'home' && (
-            <div className="max-w-7xl mx-auto space-y-10">
+            <div className="max-w-7xl mx-auto space-y-10"> 
               {/* Welcome Section */}
               <div className="relative overflow-hidden hero-blue p-10 shadow-2xl">
                 <div className="relative z-10">
-                  <h1 className="text-3xl font-black mb-3">مرحباً بك مجدداً، مدير النظام 👋</h1>
+                  <h1 className="text-3xl font-black mb-3">مرحبا بك و وزارة </h1>
                   <p className="max-w-xl leading-relaxed font-medium text-white/90">
                     إليك نظرة سريعة على حالة النظام اليوم. يمكنك إدارة المستخدمين، المشاريع، والمجموعات من خلال البطاقات أدناه.
                   </p>
