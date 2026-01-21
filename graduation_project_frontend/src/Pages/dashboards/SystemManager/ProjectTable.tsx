@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { projectService, Project } from '../services/projectService';
-import { userService, User } from '../services/userService';
+import { projectService, Project } from '../../../services/projectService';
+import { userService, User } from '../../../services/userService';
 import { FiDownload, FiPlus, FiEdit3, FiTrash2 } from 'react-icons/fi';
-import { exportToCSV } from './tableUtils';
-import { containerClass, tableWrapperClass, tableClass, theadClass } from './tableStyles';
-import ProjectForm from '../Pages/dashboards/ProjectForm';
-import { useAuthStore } from '../store/useStore';
+import { exportToCSV } from '../../../components/tableUtils';
+import { containerClass, tableWrapperClass, tableClass, theadClass } from '../../../components/tableStyles';
+import ProjectForm from '../ProjectForm';
+import { useAuthStore } from '../../../store/useStore';
 
 interface ProjectWithUsers extends Project {
   users?: User[]; // optional: users associated with this project
@@ -27,11 +27,64 @@ const ProjectsTable: React.FC = () => {
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectWithUsers | null>(null);
 
+  // Helper function to get system manager's college from AcademicAffiliation
+  // Falls back to user.college_id from auth store if affiliation lookup fails
+  const getSystemManagerCollegeId = async (userId: number): Promise<number | null> => {
+    try {
+      const affiliations = await userService.getAffiliations();
+      console.log('[ProjectsTable] fetched affiliations for user:', userId, affiliations);
+      
+      // Find active affiliation for the logged-in dean user
+      // Filter for affiliations without end_date (active) or with future end_date
+      const activeAffiliations = affiliations.filter((aff: any) => {
+        if (aff.user_id !== userId) return false;
+        if (!aff.end_date) return true; // No end date means active
+        const endDate = new Date(aff.end_date);
+        return endDate >= new Date(); // Future end date means active
+      });
+      
+      console.log('[ProjectsTable] active affiliations for user:', activeAffiliations);
+      
+      // Get the most recent active affiliation with a college
+      const affiliationWithCollege = activeAffiliations
+        .filter((aff: any) => aff.college_id)
+        .sort((a: any, b: any) => {
+          const dateA = new Date(a.start_date);
+          const dateB = new Date(b.start_date);
+          return dateB.getTime() - dateA.getTime(); // Most recent first
+        })[0];
+      
+      let collegeId = affiliationWithCollege?.college_id || null;
+      
+      // Fallback to user.college_id from auth store if no affiliation found
+      if (!collegeId && user?.college_id) {
+        collegeId = user.college_id;
+        console.log('[ProjectsTable] Using college_id from auth store as fallback:', collegeId);
+      } else {
+        console.log('[ProjectsTable] system manager college_id from affiliation:', collegeId);
+      }
+      
+      return collegeId;
+    } catch (err) {
+      console.error('[ProjectsTable] Failed to fetch system manager college:', err);
+      // Fallback to user.college_id from auth store on error
+      if (user?.college_id) {
+        console.log('[ProjectsTable] Using college_id from auth store after error:', user.college_id);
+        return user.college_id;
+      }
+      return null;
+    }
+  };
+
   // fetchProjects moved to component scope so filters can call it
   const fetchProjects = async (params?: any) => {
     setLoading(true);
     console.log('[ProjectsTable] fetchProjects called (bulk)');
     try {
+      // Get system manager's college from AcademicAffiliation
+      const systemManagerCollegeId = user?.id ? await getSystemManagerCollegeId(user.id) : null;
+      console.log('[ProjectsTable] system manager college_id from affiliation:', systemManagerCollegeId);
+
       // First fetch projects with optional filters/search
       const paramsToSend = params ? { ...params } : {};
       if (search) paramsToSend.search = search;
@@ -135,23 +188,53 @@ const ProjectsTable: React.FC = () => {
 
       console.log('[ProjectsTable] processed projects:', projectsWithUsers);
 
-      // Filter projects by dean's college using Group -> Department -> College relationship
-      const deanCollegeId = user?.college_id;
+      // Filter projects by system manager's college using Group -> Department -> College relationship
+      // Only show projects where the group's department's college matches the system manager's college
       let filteredProjects = projectsWithUsers;
-      if (deanCollegeId) {
+      if (systemManagerCollegeId) {
+        console.log('[ProjectsTable] Filtering by system manager college_id:', systemManagerCollegeId);
+        
         filteredProjects = projectsWithUsers.filter((p: any) => {
           // Find the group for this project
           const projectGroup = groups.find((g: any) => g.project === p.project_id);
-          if (!projectGroup || !projectGroup.department) return false;
+          if (!projectGroup || !projectGroup.department) {
+            return false;
+          }
           
           // Get the department for this group
           const department = departmentsById.get(projectGroup.department);
-          if (!department) return false;
+          if (!department) {
+            return false;
+          }
           
-          // Check if department's college matches dean's college
-          return department.college === deanCollegeId;
+          // Get the college ID from the department
+          // The college field could be:
+          // 1. A number (ID directly)
+          // 2. An object with cid property (if serialized)
+          // 3. null/undefined
+          let departmentCollegeId: number | null = null;
+          
+          if (department.college) {
+            if (typeof department.college === 'number') {
+              departmentCollegeId = department.college;
+            } else if (typeof department.college === 'object' && department.college.cid) {
+              departmentCollegeId = department.college.cid;
+            } else if (typeof department.college === 'string') {
+              departmentCollegeId = parseInt(department.college, 10) || null;
+            }
+          }
+          
+          if (!departmentCollegeId) {
+            return false;
+          }
+          
+          // Compare as numbers
+          const matches = Number(departmentCollegeId) === Number(systemManagerCollegeId);
+          return matches;
         });
-        console.log('[ProjectsTable] applied dean college filter (via Group->Department->College), kept:', filteredProjects.length, 'from', projectsWithUsers.length);
+        console.log('[ProjectsTable] applied system manager college filter (via Group->Department->College), kept:', filteredProjects.length, 'from', projectsWithUsers.length);
+      } else {
+        console.warn('[ProjectsTable] No system manager college_id found, showing all projects');
       }
 
       // Client-side fallback for supervisor filter: if backend didn't filter, apply locally

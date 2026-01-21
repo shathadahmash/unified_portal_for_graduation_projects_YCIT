@@ -26,12 +26,12 @@ const SupervisorsTable: React.FC = () => {
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(null);
   const [currentAffiliationId, setCurrentAffiliationId] = useState<number | null>(null);
 
-  // Helper function to get dean's college from AcademicAffiliation
-  const getDeanCollegeId = async (userId: number): Promise<number | null> => {
+  // Helper function to get system manager's college from AcademicAffiliation
+  const getSystemManagerCollegeId = async (userId: number): Promise<number | null> => {
     try {
       const affiliations = await userService.getAffiliations();
       
-      // Find active affiliation for the logged-in dean user
+      // Find active affiliation for the logged-in system manager user
       const activeAffiliations = affiliations.filter((aff: any) => {
         if (aff.user_id !== userId) return false;
         if (!aff.end_date) return true;
@@ -57,7 +57,7 @@ const SupervisorsTable: React.FC = () => {
       
       return collegeId;
     } catch (err) {
-      console.error('[SupervisorsTable] Failed to fetch dean college:', err);
+      console.error('[SupervisorsTable] Failed to fetch system manager college:', err);
       return user?.college_id || null;
     }
   };
@@ -66,14 +66,14 @@ const SupervisorsTable: React.FC = () => {
     const fetchSupervisors = async () => {
       try {
         setLoading(true);
-        // First fetch affiliations to get dean's college
+        // First fetch affiliations to get system manager's college
         const [cols, deps, affs] = await Promise.all([userService.getColleges(), userService.getDepartments(), userService.getAffiliations()]);
         setColleges(cols);
         setDepartments(deps);
         setAffiliations(affs);
 
-        // Get dean's college from AcademicAffiliation
-        const deanCollegeId = user?.id ? await getDeanCollegeId(user.id) : null;
+        // Get system manager's college from AcademicAffiliation
+        const systemManagerCollegeId = user?.id ? await getSystemManagerCollegeId(user.id) : null;
 
         const allUsers = await userService.getAllUsers();
         // فلتر فقط المشرفين (استبعاد المشرفين المساعدين)
@@ -90,13 +90,13 @@ const SupervisorsTable: React.FC = () => {
         const filtered = allUsers.filter(u => u.roles.some(r => isSupervisorRole(r.type)));
         setAllUsers(allUsers);
 
-        // Filter supervisors by dean's college using their affiliations
-        if (deanCollegeId) {
+        // Filter supervisors by system manager's college using their affiliations
+        if (systemManagerCollegeId) {
           const filteredByCollege = filtered.filter(sup => {
             // Find the supervisor's affiliation
             const supAff = affs.find((a: any) => a.user_id === sup.id);
             if (!supAff || !supAff.college_id) return false;
-            return Number(supAff.college_id) === Number(deanCollegeId);
+            return Number(supAff.college_id) === Number(systemManagerCollegeId);
           });
           setSupervisors(filteredByCollege);
         } else {

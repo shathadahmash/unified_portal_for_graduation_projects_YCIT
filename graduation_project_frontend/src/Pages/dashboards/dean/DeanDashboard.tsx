@@ -13,18 +13,19 @@ import ProjectSearch from '../ProjectSearch';
 import ProjectSelectionPage from '../ProjectSelectionPage';
 import NotificationsPanel from '../../../components/NotificationsPanel'; 
 import { useNotifications } from '../../../hooks/useNotifications'; 
-import CoSupervisorsTable from './CoSupervisorsTable';
-import SupervisorsTable from './SupervisorsTable';
-import ProjectTable from './ProjectTable';
-import ProjectReportPage from './ProjectReportPage';
-import SupervisorsReportPage from './SupervisorsReportPage';
-import CoSupervisorsReportPage from './CoSupervisorsReportPage';
+import CoSupervisorsTable from '../SystemManager/CoSupervisorsTable';
+import SupervisorsTable from '../SystemManager/SupervisorsTable';
+import ProjectTable from '../SystemManager/ProjectTable';
+import ProjectReportPage from '../SystemManager/ProjectReportPage';
+import SupervisorsReportPage from '../SystemManager/SupervisorsReportPage';
+import CoSupervisorsReportPage from '../SystemManager/CoSupervisorsReportPage';
 
 const DeanDashboard: React.FC = () => {
   const { user } = useAuthStore();
   const { notifications, unreadCount } = useNotificationsStore();
   useNotifications();
-
+console.log("user : ",user?.department_id)
+console.log("user : ",user?.college_id)
   const [activeTab, setActiveTab] = useState<'home' | 'groups' | 'projects' | 'approvals' | 'search' | 'notifications'>('home');
   const [stats, setStats] = useState({
     projects: 0,

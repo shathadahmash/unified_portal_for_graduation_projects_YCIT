@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FiSearch, FiChevronDown, FiX, FiInfo, FiCalendar, FiUser, FiBookOpen } from 'react-icons/fi';
 import { projectService } from '../../services/projectService';
+import { userService } from '../../services/userService';
 
 const ProjectSearch: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
@@ -8,8 +9,8 @@ const ProjectSearch: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   // الفلاتر (التي كانت مفقودة في الرد السابق)
-  const [filters, setFilters] = useState({ college: '', supervisor: '', year: '' });
-  const [filterOptions, setFilterOptions] = useState<any>({ colleges: [], supervisors: [], years: [] });
+  const [filters, setFilters] = useState({ college: '', department: '', supervisor: '', year: '' });
+  const [filterOptions, setFilterOptions] = useState<any>({ colleges: [], departments: [], supervisors: [], years: [] });
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   
   // مودال التفاصيل
@@ -20,12 +21,16 @@ const ProjectSearch: React.FC = () => {
   const fetchProjects = useCallback(async (currentSearch: string, currentFilters: any) => {
     setLoading(true);
     try {
-      const params = {
+      const params: any = {
         search: currentSearch,
-        college: currentFilters.college,
-        supervisor: currentFilters.supervisor,
-        year: currentFilters.year,
       };
+      
+      // Add filters only if they have values
+      if (currentFilters.college) params.college = currentFilters.college;
+      if (currentFilters.department) params.department = currentFilters.department;
+      if (currentFilters.supervisor) params.supervisor = currentFilters.supervisor;
+      if (currentFilters.year) params.year = currentFilters.year;
+      
       const data = await projectService.getProjects(params);
       setProjects(data);
     } catch (err) {
@@ -45,7 +50,29 @@ const ProjectSearch: React.FC = () => {
 
   // جلب خيارات الفلاتر عند البداية
   useEffect(() => {
-    projectService.getFilterOptions().then(setFilterOptions);
+    const loadFilterOptions = async () => {
+      try {
+        // Get filter options from project service (colleges, supervisors, years)
+        const options = await projectService.getFilterOptions();
+        
+        // Get departments from user service
+        const departments = await userService.getDepartments();
+        const departmentsList = departments.map((d: any) => ({
+          id: d.id || d.department_id,
+          name: d.name,
+        }));
+        
+        // Combine all filter options
+        setFilterOptions({
+          ...options,
+          departments: departmentsList,
+        });
+      } catch (err) {
+        console.error('Failed to load filter options:', err);
+      }
+    };
+    
+    loadFilterOptions();
   }, []);
 
   return (
@@ -65,19 +92,35 @@ const ProjectSearch: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. قسم الفلاتر (الكلية، المشرف، السنة) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+      {/* 2. قسم الفلاتر (الكلية، القسم، المشرف، السنة) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
         {/* فلتر الكلية */}
         <div className="relative">
           <button onClick={() => setActiveDropdown(activeDropdown === 'col' ? null : 'col')} className="w-full p-3 bg-white rounded-xl shadow-sm flex justify-between items-center">
             <FiChevronDown />
-            <span>{filterOptions.colleges.find((c:any) => String(c.id) === filters.college)?.name || 'كل الكليات'}</span>
+            <span className="text-right">{filterOptions.colleges?.find((c:any) => String(c.id) === filters.college)?.name || 'كل الكليات'}</span>
           </button>
           {activeDropdown === 'col' && (
             <div className="absolute z-20 w-full mt-1 bg-white border rounded-xl shadow-xl max-h-48 overflow-y-auto">
               <div onClick={() => { setFilters({...filters, college: ''}); setActiveDropdown(null); }} className="p-2 hover:bg-blue-50 cursor-pointer text-blue-600 border-b">الكل</div>
-              {filterOptions.colleges.map((c: any) => (
+              {filterOptions.colleges?.map((c: any) => (
                 <div key={c.id} onClick={() => { setFilters({...filters, college: String(c.id)}); setActiveDropdown(null); }} className="p-2 hover:bg-gray-50 cursor-pointer text-right">{c.name}</div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* فلتر القسم */}
+        <div className="relative">
+          <button onClick={() => setActiveDropdown(activeDropdown === 'dept' ? null : 'dept')} className="w-full p-3 bg-white rounded-xl shadow-sm flex justify-between items-center">
+            <FiChevronDown />
+            <span className="text-right">{filterOptions.departments?.find((d:any) => String(d.id) === filters.department)?.name || 'كل الأقسام'}</span>
+          </button>
+          {activeDropdown === 'dept' && (
+            <div className="absolute z-20 w-full mt-1 bg-white border rounded-xl shadow-xl max-h-48 overflow-y-auto">
+              <div onClick={() => { setFilters({...filters, department: ''}); setActiveDropdown(null); }} className="p-2 hover:bg-blue-50 cursor-pointer text-blue-600 border-b">الكل</div>
+              {filterOptions.departments?.map((d: any) => (
+                <div key={d.id} onClick={() => { setFilters({...filters, department: String(d.id)}); setActiveDropdown(null); }} className="p-2 hover:bg-gray-50 cursor-pointer text-right">{d.name}</div>
               ))}
             </div>
           )}
@@ -87,12 +130,12 @@ const ProjectSearch: React.FC = () => {
         <div className="relative">
           <button onClick={() => setActiveDropdown(activeDropdown === 'sup' ? null : 'sup')} className="w-full p-3 bg-white rounded-xl shadow-sm flex justify-between items-center">
             <FiChevronDown />
-            <span>{filterOptions.supervisors.find((s:any) => String(s.id) === filters.supervisor)?.name || 'كل المشرفين'}</span>
+            <span className="text-right">{filterOptions.supervisors?.find((s:any) => String(s.id) === filters.supervisor)?.name || 'كل المشرفين'}</span>
           </button>
           {activeDropdown === 'sup' && (
             <div className="absolute z-20 w-full mt-1 bg-white border rounded-xl shadow-xl max-h-48 overflow-y-auto">
               <div onClick={() => { setFilters({...filters, supervisor: ''}); setActiveDropdown(null); }} className="p-2 hover:bg-blue-50 cursor-pointer text-blue-600 border-b">الكل</div>
-              {filterOptions.supervisors.map((s: any) => (
+              {filterOptions.supervisors?.map((s: any) => (
                 <div key={s.id} onClick={() => { setFilters({...filters, supervisor: String(s.id)}); setActiveDropdown(null); }} className="p-2 hover:bg-gray-50 cursor-pointer text-right">{s.name}</div>
               ))}
             </div>
@@ -108,7 +151,7 @@ const ProjectSearch: React.FC = () => {
           {activeDropdown === 'yr' && (
             <div className="absolute z-20 w-full mt-1 bg-white border rounded-xl shadow-xl max-h-48 overflow-y-auto">
               <div onClick={() => { setFilters({...filters, year: ''}); setActiveDropdown(null); }} className="p-2 hover:bg-blue-50 cursor-pointer text-blue-600 border-b">الكل</div>
-              {filterOptions.years.map((y: string) => (
+              {filterOptions.years?.map((y: string) => (
                 <div key={y} onClick={() => { setFilters({...filters, year: y}); setActiveDropdown(null); }} className="p-2 hover:bg-gray-50 cursor-pointer text-right">{y}</div>
               ))}
             </div>

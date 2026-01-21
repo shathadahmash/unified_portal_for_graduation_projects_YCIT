@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { groupService } from "../../../services/groupService";
 import { projectService } from '../../../services/projectService';
-import { userService } from '../../../services/userService';
 import { exportToCSV } from '../../../components/tableUtils';
 import { useAuthStore } from '../../../store/useStore';
 import {
@@ -49,12 +48,12 @@ const GroupsTable: React.FC = () => {
   const [filterYear, setFilterYear] = useState("");
   const [visibleRows, setVisibleRows] = useState(10);
 
-  // Helper function to get dean's college from AcademicAffiliation
-  const getDeanCollegeId = async (userId: number): Promise<number | null> => {
+  // Helper function to get system manager's college from AcademicAffiliation
+  const getSystemManagerCollegeId = async (userId: number): Promise<number | null> => {
     try {
       const affiliations = await userService.getAffiliations();
       
-      // Find active affiliation for the logged-in dean user
+      // Find active affiliation for the logged-in system manager user
       const activeAffiliations = affiliations.filter((aff: any) => {
         if (aff.user_id !== userId) return false;
         if (!aff.end_date) return true;
@@ -80,7 +79,7 @@ const GroupsTable: React.FC = () => {
       
       return collegeId;
     } catch (err) {
-      console.error('[GroupsTable] Failed to fetch dean college:', err);
+      console.error('[GroupsTable] Failed to fetch system manager college:', err);
       return user?.college_id || null;
     }
   };
@@ -90,12 +89,12 @@ const GroupsTable: React.FC = () => {
   const fetchGroups = async () => {
     try {
       setLoading(true);
-      // Get dean's college from AcademicAffiliation
-      const deanCollegeId = user?.id ? await getDeanCollegeId(user.id) : null;
+      // Get system manager's college from AcademicAffiliation
+      const systemManagerCollegeId = user?.id ? await getSystemManagerCollegeId(user.id) : null;
 
       const data = await groupService.getGroups();
-      // Filter groups by dean's college - groups belong to departments, which belong to colleges
-      const filteredGroups = deanCollegeId ? (data || []).filter((g: any) => {
+      // Filter groups by system manager's college - groups belong to departments, which belong to colleges
+      const filteredGroups = systemManagerCollegeId ? (data || []).filter((g: any) => {
         // Get college ID from department (could be number or object with college field)
         let departmentCollegeId: number | null = null;
         if (g.department) {
@@ -107,7 +106,7 @@ const GroupsTable: React.FC = () => {
             }
           }
         }
-        return departmentCollegeId && Number(departmentCollegeId) === Number(deanCollegeId);
+        return departmentCollegeId && Number(departmentCollegeId) === Number(systemManagerCollegeId);
       }) : (data || []);
       setGroups(filteredGroups);
 
