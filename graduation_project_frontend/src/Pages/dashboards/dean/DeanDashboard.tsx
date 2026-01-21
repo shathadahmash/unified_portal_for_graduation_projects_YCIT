@@ -19,7 +19,6 @@ import ProjectTable from './ProjectTable';
 import ProjectReportPage from './ProjectReportPage';
 import SupervisorsReportPage from './SupervisorsReportPage';
 import CoSupervisorsReportPage from './CoSupervisorsReportPage';
-import GroupsTable from './GroupsTable';
 
 const DeanDashboard: React.FC = () => {
   const { user } = useAuthStore();
@@ -277,7 +276,7 @@ const DeanDashboard: React.FC = () => {
               {/* Welcome Section */}
               <div className="hero-blue p-10 text-white relative overflow-hidden">
                 <div className="relative z-10">
-                  <h1 className="text-3xl font-black mb-3">مرحباً {user?.name || 'العميد'} 👋</h1>
+                  <h1 className="text-3xl font-black mb-3">مرحباً {user?.name || 'العميد'} </h1>
                   <p className="text-primary-50 max-w-xl leading-relaxed font-medium">
                     نظرة سريعة على حالة الكلية اليوم.
                   </p>
@@ -407,8 +406,8 @@ const DeanDashboard: React.FC = () => {
           )}
 
           {activeTab === 'groups' && (
-            <div className="theme-card p-0 rounded-3xl">
-              <GroupsTable />
+            <div className="theme-card p-8 rounded-3xl">
+              <h2 className="text-2xl font-black text-slate-800 mb-6">المجموعات</h2>
             </div>
           )}
 

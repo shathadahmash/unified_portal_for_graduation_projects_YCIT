@@ -123,12 +123,6 @@ export const groupService = {
     return response.data;
   },
 
-  // حذف مجموعة كاملة
-  async deleteGroup(groupId: number) {
-    const response = await api.delete(`/groups/${groupId}/`);
-    return response.data;
-  },
-
   async getCollegeGroups(collegeId: number) {
    const res = await api.get(`/groups/?college_id=${collegeId}`);
    return res.data;
@@ -142,9 +136,32 @@ export const groupService = {
   },
 
   async getMyGroup(): Promise<any> {
-    const response = await api.get('/groups/my-group/');
-    return response.data;
+    try {
+      const response = await api.get('/groups/my-group/');
+      return response.data;
+    } catch (error: any) {
+      // إذا كان السيرفر يعيد 404 فهذا يعني لا توجد مجموعة، وهو أمر طبيعي
+      if (error.response && error.response.status === 404) {
+        return null; 
+      }
+      throw error; // أي خطأ آخر (مثل 500) يتم رميه
+    }
   },
+
+  
+async sendIndividualInvite(requestId: number, userId: number, role: string) {
+  // منع إرسال الطلب إذا كان المعرف undefined أو NaN
+  if (!requestId || isNaN(requestId)) {
+    throw new Error("عذراً، لم يتم العثور على معرف صالح للمجموعة.");
+  }
+
+  const response = await api.post(`/groups/${requestId}/send-individual-invite/`, {
+    user_id: userId,
+    role: role
+  });
+  return response.data;
+}
+
 
 
 };

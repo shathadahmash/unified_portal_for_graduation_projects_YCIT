@@ -8,8 +8,8 @@ import CoSupervisorDashboard from '../pages/dashboards/CoSupervisorDashboard';
 import DepartmentHeadDashboard from '../pages/dashboards/DepartmentHeadDashboard';
 import DeanDashboard from '../Pages/dashboards/dean/DeanDashboard';
 import UniversityPresidentDashboard from '../pages/dashboards/UniversityPresidentDashboard';
-import SystemManagerDashboard from '../pages/dashboards/SystemManagerDashboard';
-import MinistryDashboard from '../pages/dashboards/MinistryDashboard';
+import SystemManagerDashboard from '../Pages/dashboards/SystemManager/SystemManagerDashboard';
+import MinistryDashboard from '../Pages/dashboards/ministry/MinistryDashboard';
 import ExternalCompanyDashboard from '../pages/dashboards/ExternalCompanyDashboard';
 import StudentDashboard from '../Pages/dashboards/StudentDashboard';
 

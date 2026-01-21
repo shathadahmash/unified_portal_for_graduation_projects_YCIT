@@ -150,21 +150,34 @@ class GroupSerializer(serializers.ModelSerializer):
         return GroupMembers.objects.filter(group=obj).count()
 
 
-class GroupDetailSerializer(GroupSerializer):
+class GroupDetailSerializer(serializers.ModelSerializer):
     project_detail = serializers.SerializerMethodField()
+    members_count = serializers.SerializerMethodField()
 
-    class Meta(GroupSerializer.Meta):
-        fields = GroupSerializer.Meta.fields + ['project_detail']
+    class Meta:
+        model = Group # سنستخدمه بشكل مرن
+        fields = ['group_id', 'group_name', 'project_detail', 'members_count']
 
     def get_project_detail(self, obj):
-        if not obj.project:
-            return None
-        return {
-            'project_id': obj.project.project_id,
-            'title': obj.project.title,
-            'type': obj.project.type,
-            'state': obj.project.state,
-        }
+        # التأكد من وجود مشروع سواء في الطلب أو المجموعة الرسمية
+        project = getattr(obj, 'project', None)
+        if project:
+            return {
+                'project_id': project.project_id,
+                'title': project.title,
+                'state': getattr(project, 'state', 'N/A'),
+            }
+        return None
+
+    def get_members_count(self, obj):
+        # إذا كان مجموعة رسمية نعد من جدول GroupMembers
+        if hasattr(obj, 'groupmembers_set'):
+            return obj.groupmembers_set.count()
+        # إذا كان طلب إنشاء نعد من جدول Approvals
+        if hasattr(obj, 'approvals'):
+            return obj.approvals.count()
+        return 0
+
 
 
 # ==============================================================================
@@ -176,19 +189,24 @@ class GroupInvitationSerializer(serializers.ModelSerializer):
     invited_by_detail = UserSerializer(source='invited_by', read_only=True)
     group_detail = GroupSerializer(source='group', read_only=True)
     is_expired = serializers.SerializerMethodField()
-
+    
     class Meta:
         model = GroupInvitation
-        fields = '__all__'
-
+        fields = [
+            'invitation_id', 'group', 'group_detail', 'invited_student',
+            'invited_student_detail', 'invited_by', 'invited_by_detail',
+            'status', 'created_at', 'expires_at', 'responded_at', 'is_expired'
+        ]
+        read_only_fields = ['invitation_id', 'created_at', 'responded_at']
+    
     def get_is_expired(self, obj):
         return obj.is_expired()
 
 
 class CreateGroupInvitationSerializer(serializers.Serializer):
     group_id = serializers.IntegerField()
-    student_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
-
+    student_ids = serializers.ListField(child=serializers.IntegerField())
+    
     def validate_student_ids(self, value):
         if not value:
             raise serializers.ValidationError("يجب تحديد طالب واحد على الأقل")
@@ -230,10 +248,17 @@ class ApprovalRequestSerializer(serializers.ModelSerializer):
     requested_by_detail = UserSerializer(source='requested_by', read_only=True)
     current_approver_detail = UserSerializer(source='current_approver', read_only=True)
     group_detail = GroupSerializer(source='group', read_only=True)
-
+    
     class Meta:
         model = ApprovalRequest
-        fields = '__all__'
+        fields = [
+            'approval_id', 'approval_type', 'group', 'group_detail', 'project',
+            'requested_by', 'requested_by_detail', 'current_approver',
+            'current_approver_detail', 'approval_level', 'status', 'comments',
+            'created_at', 'updated_at', 'approved_at'
+        ]
+        read_only_fields = ['approval_id', 'created_at', 'updated_at', 'approved_at']
+
 
 
 # ==============================================================================
@@ -241,71 +266,131 @@ class ApprovalRequestSerializer(serializers.ModelSerializer):
 # ==============================================================================
 
 class GroupCreateSerializer(serializers.Serializer):
+    # حقول المجموعة
     group_name = serializers.CharField(max_length=255)
-    project_title = serializers.CharField(max_length=500)
-    project_type = serializers.CharField(max_length=100)
-    project_description = serializers.CharField()
     student_ids = serializers.ListField(child=serializers.IntegerField(), required=True)
     supervisor_ids = serializers.ListField(child=serializers.IntegerField(), required=False, default=[])
     co_supervisor_ids = serializers.ListField(child=serializers.IntegerField(), required=False, default=[])
     department_id = serializers.IntegerField(required=True)
     college_id = serializers.IntegerField(required=True)
+    note = serializers.CharField(required=False, allow_blank=True, default='')
+
+    # حقول المشروع (تم دمجها من النسخة الأولى)
+    project_title = serializers.CharField(max_length=500)
+    project_type = serializers.CharField(max_length=100)
+    project_description = serializers.CharField()
 
     def validate(self, data):
         MAX_STUDENTS, MAX_SUPERVISORS, MAX_CO_SUPERVISORS = 5, 3, 2
+        
+        # التحقق من الأعداد
         if len(data['student_ids']) > MAX_STUDENTS:
             raise serializers.ValidationError(f"الحد الأقصى للطلاب هو {MAX_STUDENTS}")
-        if len(data['supervisor_ids']) > MAX_SUPERVISORS:
+        if len(data.get('supervisor_ids', [])) > MAX_SUPERVISORS:
             raise serializers.ValidationError(f"الحد الأقصى للمشرفين هو {MAX_SUPERVISORS}")
-        if len(data['co_supervisor_ids']) > MAX_CO_SUPERVISORS:
+        if len(data.get('co_supervisor_ids', [])) > MAX_CO_SUPERVISORS:
             raise serializers.ValidationError(f"الحد الأقصى للمشرفين المساعدين هو {MAX_CO_SUPERVISORS}")
-        all_ids = data['student_ids'] + data['supervisor_ids'] + data['co_supervisor_ids']
+
+        # التحقق من عدم التكرار والوجود
+        all_ids = data['student_ids'] + data.get('supervisor_ids', []) + data.get('co_supervisor_ids', [])
         if len(all_ids) != len(set(all_ids)):
-            raise serializers.ValidationError("يجب أن تكون قائمة الأعضاء والمشرفين فريدة (لا يوجد تكرار)")
-        users = User.objects.filter(id__in=all_ids)
-        if users.count() != len(all_ids):
-            raise serializers.ValidationError("تحقق من صحة معرفات المستخدمين المدخلة")
+            raise serializers.ValidationError("يجب أن تكون قائمة الأعضاء والمشرفين فريدة")
+            
+        if User.objects.filter(id__in=all_ids).count() != len(all_ids):
+            raise serializers.ValidationError("بعض معرفات المستخدمين غير صحيحة")
+
+        # التحقق من القسم والكلية
         try:
             Department.objects.get(department_id=data['department_id'])
             College.objects.get(cid=data['college_id'])
         except (Department.DoesNotExist, College.DoesNotExist):
-            raise serializers.ValidationError("القسم أو الكلية المحددة غير صالحة")
+            raise serializers.ValidationError("القسم أو الكلية غير صالحة")
+
+        # التحقق من أن المنشئ ضمن الطلاب
         request = self.context.get('request')
         if request and request.user.id not in data['student_ids']:
-            raise serializers.ValidationError("يجب أن يكون الطالب المنشئ للمجموعة ضمن قائمة الطلاب")
-        data['users'] = users
+            raise serializers.ValidationError("يجب أن يكون الطالب المنشئ ضمن قائمة الطلاب")
+
         return data
+    
 
     def create(self, validated_data):
-        project = Project.objects.create(
-            title=validated_data['project_title'],
-            type=validated_data['project_type'],
-            description=validated_data['project_description'],
-            start_date=timezone.now().date(),
-            state='Pending Approval'
+        from django.db import transaction
+        from django.utils import timezone
+        import json
+        from .models import (
+            Project, GroupCreationRequest, GroupMemberApproval, 
+            NotificationLog, ApprovalRequest, Department, College
         )
-        group_data = {
-            'group_name': validated_data['group_name'],
-            'project_id': project.project_id,
-            'project_title': validated_data['project_title'],
-            'project_type': validated_data['project_type'],
-            'project_description': validated_data['project_description'],
-            'student_ids': validated_data['student_ids'],
-            'supervisor_ids': validated_data['supervisor_ids'],
-            'co_supervisor_ids': validated_data['co_supervisor_ids'],
-            'department_id': validated_data['department_id'],
-            'college_id': validated_data['college_id'],
-        }
+        
         requested_by = self.context['request'].user
-        approval_request = ApprovalRequest.objects.create(
-            approval_type='project_proposal',
-            project=project,
-            requested_by=requested_by,
-            current_approver=requested_by,
-            comments=json.dumps(group_data),
-            status='pending'
-        )
-        return approval_request
+
+        with transaction.atomic():
+            # 1. إنشاء المشروع أولاً
+            project = Project.objects.create(
+                title=validated_data['project_title'],
+                type=validated_data['project_type'],
+                description=validated_data['project_description'],
+                start_date=timezone.now().date(),
+                state='Pending Approval'
+            )
+
+            # 2. إنشاء طلب المجموعة الرئيسي مرتبطاً بالمشروع
+            group_request = GroupCreationRequest.objects.create(
+                group_name=validated_data['group_name'],
+                creator=requested_by,
+                department_id=validated_data['department_id'],
+                college_id=validated_data['college_id'],
+                project=project,  # ربط المشروع بطلب المجموعة
+                note=validated_data.get('note', '')
+            )
+
+            # 3. معالجة المشاركين (طلاب، مشرفين، مساعدين)
+            participants = []
+            for s_id in validated_data.get('student_ids', []): participants.append({'id': s_id, 'role': 'student'})
+            for s_id in validated_data.get('supervisor_ids', []): participants.append({'id': s_id, 'role': 'supervisor'})
+            for s_id in validated_data.get('co_supervisor_ids', []): participants.append({'id': s_id, 'role': 'co_supervisor'})
+
+            for person in participants:
+                p_id = int(person['id'])
+                is_creator = (p_id == requested_by.id)
+                
+                # إنشاء سجل العضوية والموافقة
+                member_status = GroupMemberApproval.objects.create(
+                    request=group_request,
+                    user_id=p_id,
+                    role=person['role'],
+                    status='accepted' if is_creator else 'pending'
+                )
+
+                # إرسال إشعار دعوة للبقية
+                if not is_creator:
+                    NotificationLog.objects.create(
+                        recipient_id=p_id,
+                        notification_type='invitation',
+                        title='دعوة انضمام للمجموعة',
+                        message=f'قام {requested_by.name} بدعوتك لمجموعة {group_request.group_name}',
+                        related_id=member_status.id 
+                    )
+
+            # 4. إنشاء طلب الاعتماد الرسمي (ApprovalRequest) لربط العملية بالنظام الإداري
+            # يتم تخزين بيانات المجموعة في حقل comments كنسخة احتياطية
+            group_summary = {
+                'group_name': validated_data['group_name'],
+                'student_ids': validated_data['student_ids'],
+                'department_id': validated_data['department_id'],
+            }
+            
+            ApprovalRequest.objects.create(
+                approval_type='project_proposal',
+                project=project,
+                requested_by=requested_by,
+                current_approver=None, # يتم تحديده لاحقاً بناءً على سير العمل
+                comments=json.dumps(group_summary),
+                status='pending'
+            )
+
+            return group_request
 
 
 # ==============================================================================
@@ -313,29 +398,26 @@ class GroupCreateSerializer(serializers.Serializer):
 # ==============================================================================
 
 class NotificationLogSerializer(serializers.ModelSerializer):
-    recipient_detail = UserSerializer(source='recipient', read_only=True)
-    related_user_detail = UserSerializer(source='related_user', read_only=True)
-    notification_type_display = serializers.CharField(source='get_notification_type_display', read_only=True)
-    related_group_name = serializers.CharField(source='related_group.group_name', read_only=True, allow_null=True)
-    related_user_name = serializers.CharField(source='related_user.name', read_only=True, allow_null=True)
-    related_approval_type = serializers.CharField(source='related_approval.get_approval_type_display', read_only=True, allow_null=True)
+    # الحقل الآن مخزن كرقم مباشرة في قاعدة البيانات
+    # سنعرضه كما هو لكي يستخدمه React فوراً
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = NotificationLog
         fields = [
-            'notification_id',
-            'recipient', 'recipient_detail',
-            'notification_type', 'notification_type_display',
-            'title', 'message',
-            'related_group', 'related_group_name',
-            'related_project',
-            'related_user', 'related_user_name', 'related_user_detail',
-            'related_approval_type',
-            'is_read', 'is_sent_email',
-            'created_at', 'read_at',
+            'notification_id', 
+            'notification_type', 
+            'title', 
+            'message', 
+            'is_read', 
+            'status', 
+            'related_id',  # هذا الحقل الآن يحمل ID الموافقة الفردية مباشرة
+            'created_at'
         ]
-        read_only_fields = fields
 
+    def get_status(self, obj):
+        return 'read' if obj.is_read else 'unread'
+    
 
 class NotificationSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
@@ -385,4 +467,29 @@ class UserRolesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserRoles
-        fields = ['id', 'user', 'user_detail', 'role', 'role_detail']
+        fields = ['id', 'user', 'user_detail', 'role', 'ROLE_CHOICES', 'role_detail']
+
+
+
+class GroupMemberStatusSerializer(serializers.ModelSerializer):
+    # جلب الاسم من موديل الـ User المرتبط
+    name = serializers.ReadOnlyField(source='user.name') 
+    
+    # الـ role والـ status سيتم جلبهما تلقائياً من موديل GroupMemberApproval
+    # ولكن للتأكد من وصول القيم النصية (student, supervisor) وليس الـ ID
+    role = serializers.CharField(read_only=True)
+    status = serializers.CharField()
+
+    class Meta:
+        model = GroupMemberApproval
+        fields = ['id', 'user', 'name', 'role', 'status']
+
+
+class GroupDetailSerializer(serializers.ModelSerializer):
+    # 'approvals' هو الحقل الذي يبحث عنه الـ React الآن
+    approvals = GroupMemberStatusSerializer(many=True, read_only=True)
+
+    class Meta:
+        from .models import GroupCreationRequest
+        model = GroupCreationRequest
+        fields = ['id', 'group_name', 'creator', 'approvals', 'is_fully_confirmed']

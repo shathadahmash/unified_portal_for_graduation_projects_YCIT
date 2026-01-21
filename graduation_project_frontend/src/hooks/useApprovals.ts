@@ -24,9 +24,5 @@ export const useApprovals = () => {
     fetchApprovals('pending');
   }, []);
 
-  return {
-    isLoading,
-    error,
-    refetch: fetchApprovals,
-  };
+  return { isLoading, error, refetch: fetchApprovals };
 };

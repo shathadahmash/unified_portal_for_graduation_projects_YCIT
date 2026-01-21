@@ -5,12 +5,14 @@ import { FiDownload, FiPlus, FiEdit3, FiTrash2 } from 'react-icons/fi';
 import { exportToCSV } from '../../../components/tableUtils';
 import { containerClass, tableWrapperClass, tableClass, theadClass } from '../../../components/tableStyles';
 import ProjectForm from '../../../Pages/dashboards/ProjectForm';
+import { useAuthStore } from '../../../store/useStore';
 
 interface ProjectWithUsers extends Project {
   users?: User[]; // optional: users associated with this project
 }
 
 const ProjectsTable: React.FC = () => {
+  const { user } = useAuthStore();
   const [projects, setProjects] = useState<ProjectWithUsers[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -46,6 +48,11 @@ const ProjectsTable: React.FC = () => {
       const groupSupervisors = Array.isArray(bulk.group_supervisors) ? bulk.group_supervisors : [];
       const users = Array.isArray(bulk.users) ? bulk.users : [];
       const colleges = Array.isArray(bulk.colleges) ? bulk.colleges : [];
+      const departments = Array.isArray(bulk.departments) ? bulk.departments : [];
+
+      // Fetch departments for college relationship (dean version approach)
+      const departmentsExtra = await userService.getDepartments();
+      console.log('[ProjectsTable] departments fetched:', departmentsExtra.length);
 
       console.log('[ProjectsTable] counts:', {
         projects: projectsRaw.length,
@@ -54,10 +61,12 @@ const ProjectsTable: React.FC = () => {
         groupSupervisors: groupSupervisors.length,
         users: users.length,
         colleges: colleges.length,
+        departments: departments.length,
       });
 
       const usersById = new Map<number, any>(users.map((u: any) => [u.id, u]));
       const collegesById = new Map<any, any>(colleges.map((c: any) => [c.cid, c.name_ar]));
+      const departmentsById = new Map<any, any>(departmentsExtra.map((d: any) => [d.department_id, d]));
 
       const projectsWithUsers: ProjectWithUsers[] = projectsRaw.map((p: any) => {
         const relatedGroups = groups.filter((g: any) => g.project === p.project_id);
@@ -80,7 +89,14 @@ const ProjectsTable: React.FC = () => {
         const supervisorUser = supRows.length ? usersById.get(supRows[0].user) : null;
         const coSupervisorUser = coSupRows.length ? usersById.get(coSupRows[0].user) : null;
 
-        const collegeName = collegesById.get(p.college) || p.college || '-';
+        // Get department from group
+        const department = mainGroup && mainGroup.department ? departmentsById.get(mainGroup.department) : null;
+        const departmentName = department ? department.name || '-' : '-';
+
+        // Get college from department's college relationship, fallback to project's college
+        const collegeName = department ? 
+          (collegesById.get(department.college) || '-') : 
+          (collegesById.get(p.college) || p.college || '-');
 
         return {
           ...p,
@@ -90,16 +106,36 @@ const ProjectsTable: React.FC = () => {
           supervisor: supervisorUser ? { ...supervisorUser, name: supervisorUser.name || `${supervisorUser.first_name || ''} ${supervisorUser.last_name || ''}`.trim() } : null,
           co_supervisor: coSupervisorUser ? { ...coSupervisorUser, name: coSupervisorUser.name || `${coSupervisorUser.first_name || ''} ${coSupervisorUser.last_name || ''}`.trim() } : null,
           college_name: collegeName,
+          department_name: departmentName,
         };
       });
 
       console.log('[ProjectsTable] processed projects:', projectsWithUsers);
 
+      // Filter projects by dean's college using Group -> Department -> College relationship
+      const deanCollegeId = user?.college_id;
+      let filteredProjects = projectsWithUsers;
+      if (deanCollegeId) {
+        filteredProjects = projectsWithUsers.filter((p: any) => {
+          // Find the group for this project
+          const projectGroup = groups.find((g: any) => g.project === p.project_id);
+          if (!projectGroup || !projectGroup.department) return false;
+          
+          // Get the department for this group
+          const department = departmentsById.get(projectGroup.department);
+          if (!department) return false;
+          
+          // Check if department's college matches dean's college
+          return department.college === deanCollegeId;
+        });
+        console.log('[ProjectsTable] applied dean college filter (via Group->Department->College), kept:', filteredProjects.length, 'from', projectsWithUsers.length);
+      }
+
       // Client-side fallback for supervisor filter: if backend didn't filter, apply locally
       const supervisorFilter = paramsToSend?.supervisor || params?.supervisor;
       if (supervisorFilter) {
         const supIdStr = String(supervisorFilter);
-        const filtered = projectsWithUsers.filter((p: any) => {
+        const filtered = filteredProjects.filter((p: any) => {
           const relatedGroup = groups.find((g: any) => g.project === p.project_id);
           const groupId = relatedGroup ? relatedGroup.group_id : null;
           if (!groupId) return false;
@@ -108,7 +144,7 @@ const ProjectsTable: React.FC = () => {
         console.log('[ProjectsTable] applied client-side supervisor filter, kept:', filtered.length);
         setProjects(filtered);
       } else {
-        setProjects(projectsWithUsers);
+        setProjects(filteredProjects);
       }
     } catch (err) {
       console.error('[ProjectsTable] Failed to fetch projects:', err);
@@ -153,7 +189,7 @@ const ProjectsTable: React.FC = () => {
     // initial load
     fetchProjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   // auto-apply when filters (non-search) change. Search waits for Enter.
   React.useEffect(() => {
@@ -190,9 +226,10 @@ const ProjectsTable: React.FC = () => {
       await projectService.deleteProject(projectId);
       alert('تم حذف المشروع بنجاح');
       fetchProjects(); // Refresh the list
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to delete project:', err);
-      alert('فشل في حذف المشروع');
+      const errorMessage = err?.response?.data?.error || err?.response?.data?.detail || err?.message || 'خطأ غير معروف';
+      alert(`فشل في حذف المشروع: ${errorMessage}`);
     }
   };
 
@@ -223,7 +260,6 @@ const ProjectsTable: React.FC = () => {
           </button>
         </div>
       </div>
-
       <div className="mb-4">
         <div className="bg-white rounded-lg shadow-sm border p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
@@ -382,6 +418,7 @@ const ProjectsTable: React.FC = () => {
             <th className="px-4 py-2 text-right">اسم المجموعة</th>
             <th className="px-4 py-2 text-right">المشرف المشارك</th>
             <th className="px-4 py-2 text-right">الكلية</th>
+            <th className="px-4 py-2 text-right">القسم</th>
             <th className="px-4 py-2 text-right">السنة</th>
             <th className="px-4 py-2 text-right">المستخدمون</th>
             <th className="px-4 py-2 text-center">ملف المشروع</th>
@@ -399,6 +436,7 @@ const ProjectsTable: React.FC = () => {
               <td className="px-4 py-2 text-right">{(proj as any).group_name || '-'}</td>
               <td className="px-4 py-2 text-right">{proj.co_supervisor?.name || '-'}</td>
               <td className="px-4 py-2 text-right">{(proj as any).college_name || '-'}</td>
+              <td className="px-4 py-2 text-right">{(proj as any).department_name || '-'}</td>
               <td className="px-4 py-2 text-right">{proj.start_date ? new Date(proj.start_date).getFullYear() : '-'}</td>
               <td className="px-4 py-2 text-right">
                 {proj.users?.length ? proj.users.map((u: any) => u.displayName || u.name).join(', ') : '-'}
