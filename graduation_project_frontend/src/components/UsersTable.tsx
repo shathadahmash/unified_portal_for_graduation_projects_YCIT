@@ -30,7 +30,6 @@ interface NewUser {
   roleId?: number;
 }
 
-<<<<<<< HEAD
 interface UsersTableProps {
   initialRole?: string;
   departmentId?: number | null; // optional: limit users to a specific department
@@ -38,9 +37,6 @@ interface UsersTableProps {
 }
 
 const UsersTable: React.FC<UsersTableProps> = ({ initialRole, departmentId, onlyRoles }) => {
-=======
-const UsersTable: React.FC = () => {
->>>>>>> 76e6c103b6616d56e8561b168227dad69edac787
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
