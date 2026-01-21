@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore, useNotificationsStore } from '../../store/useStore';
@@ -45,30 +44,15 @@ const DepartmentHeadDashboard: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/groups/department-stats/', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        const data = await response.json();
-        setStats(data);
+        const res = await (await import('../../services/api')).default.get('groups/department-stats/');
+        console.log('[DepartmentHead] department-stats response', res.data);
+        setStats(res.data);
       } catch (error) {
         console.error("Error fetching stats:", error);
       }
     };
     fetchStats();
   }, []);
-=======
-import React, { useState } from 'react';
-import { useAuthStore, useApprovalsStore } from '../../store/useStore';
-import { FiCheckSquare, FiUsers, FiFileText } from 'react-icons/fi';
-import Layout from '../../components/Layout';
-
-const DepartmentHeadDashboard: React.FC = () => {
-  const { user } = useAuthStore();
-  const { pendingApprovals } = useApprovalsStore();
-  const [activeTab, setActiveTab] = useState('home');
->>>>>>> 76e6c103b6616d56e8561b168227dad69edac787
 
   const dashboardCards = useMemo(() => [
     {
@@ -127,7 +111,6 @@ const DepartmentHeadDashboard: React.FC = () => {
   };
 
   return (
-<<<<<<< HEAD
     <div className="flex h-screen bg-[#F8FAFC]" dir="rtl">
       {/* Sidebar Overlay */}
       <div className={`fixed inset-0 bg-black/50 z-50 transition-opacity ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsSidebarOpen(false)} />
@@ -261,67 +244,6 @@ const DepartmentHeadDashboard: React.FC = () => {
 
       <NotificationsPanel isOpen={isNotifPanelOpen} onClose={() => setIsNotifPanelOpen(false)} />
     </div>
-=======
-    <Layout>
-      <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">مرحباً، أ.د {user?.name}</h1>
-          <p className="text-sm text-slate-400 mt-1">مسؤوليات: إدارة الأقسام، الموافقات الداخلية، متابعة البرامج والمشروعات</p>
-        </div>
-
-        {/* بطاقات إحصائية */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-6 rounded-lg shadow border-r-4 border-yellow-500">
-            <p className="text-gray-600 text-sm">موافقات معلقة</p>
-            <p className="text-3xl font-bold text-gray-900">{pendingApprovals.length}</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow border-r-4 border-blue-500">
-            <p className="text-gray-600 text-sm">الأقسام</p>
-            <p className="text-3xl font-bold text-gray-900">5</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow border-r-4 border-green-500">
-            <p className="text-gray-600 text-sm">المشاريع</p>
-            <p className="text-3xl font-bold text-gray-900">24</p>
-          </div>
-        </div>
-
-        {/* التبويبات */}
-        <div className="border-b border-gray-200 flex gap-8">
-          <button onClick={() => setActiveTab('home')} className={`pb-4 font-semibold ${activeTab === 'home' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}>
-            الرئيسية
-          </button>
-          <button onClick={() => setActiveTab('approvals')} className={`pb-4 font-semibold ${activeTab === 'approvals' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}>
-            الموافقات
-          </button>
-          <button onClick={() => setActiveTab('reports')} className={`pb-4 font-semibold ${activeTab === 'reports' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}>
-            التقارير
-          </button>
-        </div>
-
-        {/* محتوى التبويبات */}
-        <div className="mt-6">
-          {activeTab === 'approvals' && (
-            <div className="space-y-4">
-              {pendingApprovals.length > 0 ? (
-                pendingApprovals.map((approval) => (
-                  <div key={approval.approval_id} className="bg-white p-6 rounded-lg shadow border-l-4 border-yellow-500">
-                    <p className="font-bold text-gray-900">{approval.approval_type}</p>
-                    <p className="text-sm text-gray-600 mt-1">من: {approval.requested_by.name}</p>
-                    <div className="flex gap-2 mt-4">
-                      <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">موافقة</button>
-                      <button className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">رفض</button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-gray-600 py-8">لا توجد موافقات معلقة</p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </Layout>
->>>>>>> 76e6c103b6616d56e8561b168227dad69edac787
   );
 };
 

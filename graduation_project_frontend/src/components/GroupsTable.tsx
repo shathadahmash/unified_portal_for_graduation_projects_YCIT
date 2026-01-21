@@ -27,7 +27,7 @@ interface Group {
   created_at: string;
 }
 
-const GroupsTable: React.FC = () => {
+const GroupsTable: React.FC<{ departmentId?: number | null }> = ({ departmentId }) => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -47,7 +47,47 @@ const GroupsTable: React.FC = () => {
     try {
       setLoading(true);
       const data = await groupService.getGroups();
+<<<<<<< HEAD
+      // if departmentId provided, filter groups to that department (attempt several possible keys)
+      const filtered = departmentId == null ? data : data.filter((g: any) => {
+        if (!g) return false;
+        if (g.department && (g.department.department_id || g.department.id)) {
+          const did = g.department.department_id || g.department.id;
+          return String(did) === String(departmentId);
+        }
+        if (g.department_id) return String(g.department_id) === String(departmentId);
+        if (g.college && String(g.college) === String(departmentId)) return true; // fallback
+        return false;
+      });
+      setGroups(filtered);
+      // fetch project details for any referenced project ids
+      const projectIds = Array.from(new Set(
+        data
+          .map((g: any) => {
+            if (!g) return null;
+            if (typeof g.project === 'number') return g.project;
+            if (g.project && typeof g.project === 'object') return g.project.project_id || g.project.id;
+            if (g.project_detail && g.project_detail.project_id) return g.project_detail.project_id;
+            return null;
+          })
+          .filter(Boolean)
+      ));
+
+      if (projectIds.length > 0) {
+        const fetched: Record<number, any> = {};
+        await Promise.all(projectIds.map(async (pid: number) => {
+          try {
+            const p = await projectService.getProjectById(pid);
+            if (p && p.project_id) fetched[p.project_id] = p;
+          } catch (e) {
+            // ignore
+          }
+        }));
+        setProjectsMap(fetched);
+      }
+=======
       setGroups(data);
+>>>>>>> 76e6c103b6616d56e8561b168227dad69edac787
     } catch (err) {
       console.error("❌ Error fetching groups:", err);
     } finally {

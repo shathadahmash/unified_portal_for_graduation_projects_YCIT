@@ -11,8 +11,12 @@ interface ProjectWithUsers extends Project {
   users?: User[]; // optional: users associated with this project
 }
 
+<<<<<<< HEAD
+const ProjectsTable: React.FC<{ departmentId?: number | null }> = ({ departmentId }) => {
+=======
 const ProjectsTable: React.FC = () => {
   const { user } = useAuthStore();
+>>>>>>> 76e6c103b6616d56e8561b168227dad69edac787
   const [projects, setProjects] = useState<ProjectWithUsers[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -34,6 +38,8 @@ const ProjectsTable: React.FC = () => {
     try {
       // First fetch projects with optional filters/search
       const paramsToSend = params ? { ...params } : {};
+      // if departmentId provided, add to params (backend may accept department_id)
+      if (departmentId != null) paramsToSend.department_id = departmentId;
       if (search) paramsToSend.search = search;
       console.log('[ProjectsTable] fetching projects with params:', paramsToSend);
       const projectsResp = await projectService.getProjects(paramsToSend);
@@ -89,7 +95,12 @@ const ProjectsTable: React.FC = () => {
       });
       const departmentsById = departmentsMap;
 
-      const projectsWithUsers: ProjectWithUsers[] = projectsRaw.map((p: any) => {
+      let filteredProjectsRaw = projectsRaw;
+      if (departmentId != null) {
+        filteredProjectsRaw = projectsRaw.filter((p: any) => String(p.department_id || p.college || '') === String(departmentId));
+      }
+
+      const projectsWithUsers: ProjectWithUsers[] = filteredProjectsRaw.map((p: any) => {
         const relatedGroups = groups.filter((g: any) => g.project === p.project_id);
         const mainGroup = relatedGroups.length ? relatedGroups[0] : null;
         const groupId = mainGroup ? mainGroup.group_id : null;

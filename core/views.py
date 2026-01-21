@@ -118,6 +118,92 @@ class GroupViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=400)
 
+    @action(detail=False, methods=['post'], url_path='create-by-head', permission_classes=[IsAuthenticated])
+    def create_by_head(self, request):
+        """إنشاء مجموعة بواسطة رئيس القسم مع إصلاح مشكلة project_type وحصر البيانات"""
+        user = request.user
+        if not UserRoles.objects.filter(user=user, role__type='Department Head').exists():
+            return Response({"error": "فقط رئيس القسم يمكنه تنفيذ هذا الإجراء"}, status=403)
+
+        affiliation = AcademicAffiliation.objects.filter(user=user).first()
+        if not affiliation or not affiliation.department:
+            return Response({"error": "يجب أن تكون مرتبطاً بقسم لإتمام العملية"}, status=400)
+
+        data = request.data
+        group_name = data.get("group_name", "").strip()
+        student_ids = data.get("student_ids", [])
+        supervisor_id = data.get("supervisor_id")
+        co_supervisor_id = data.get("co_supervisor_id")
+        
+        # بيانات المشروع المطلوبة
+        project_title = data.get("project_title", f"مشروع {group_name}")
+        project_type = data.get("project_type", "ProposedProject") # القيمة الافتراضية لحل المشكلة
+        project_description = data.get("project_description", f"وصف مشروع مجموعة {group_name}")
+
+        if not group_name or not student_ids:
+            return Response({"error": "البيانات غير مكتملة (اسم المجموعة والطلاب مطلوبان)"}, status=400)
+
+        try:
+            with transaction.atomic():
+                # 1. إنشاء المشروع أولاً لتجنب خطأ project_type
+                project = Project.objects.create(
+                    title=project_title,
+                    type=project_type,
+                    description=project_description,
+                    start_date=timezone.now().date(),
+                    college=affiliation.college,
+                    created_by=user,
+                    state='Pending'
+                )
+                
+                # 2. إنشاء المجموعة وربطها بالمشروع والقسم
+                group = Group.objects.create(
+                    group_name=group_name, 
+                    department=affiliation.department,
+                    project=project
+                )
+                
+                # 3. إضافة المشرفين
+                if supervisor_id:
+                    sup_user = User.objects.get(id=supervisor_id)
+                    GroupSupervisors.objects.create(user=sup_user, group=group, type='supervisor')
+                
+                if co_supervisor_id:
+                    co_sup_user = User.objects.get(id=co_supervisor_id)
+                    GroupSupervisors.objects.create(user=co_sup_user, group=group, type='co_supervisor')
+                
+                # 4. إضافة الطلاب
+                for s_id in student_ids:
+                    s_user = User.objects.get(id=s_id)
+                    GroupMembers.objects.create(user=s_user, group=group)
+                
+                return Response({"message": "تم إنشاء المجموعة والمشروع بنجاح", "group_id": group.group_id}, status=201)
+        except Exception as e:
+            return Response({"error": f"فشل إنشاء المجموعة: {str(e)}"}, status=400)
+
+    @action(detail=False, methods=['get'], url_path='department-stats', permission_classes=[IsAuthenticated])
+    def department_stats(self, request):
+        """إحصائيات القسم لرئيس القسم"""
+        user = request.user
+        affiliation = AcademicAffiliation.objects.filter(user=user).first()
+        if not affiliation or not affiliation.department:
+            return Response({"error": "يجب أن تكون مرتبطاً بقسم"}, status=400)
+        
+        dept = affiliation.department
+        students_count = User.objects.filter(academicaffiliation__department=dept, userroles__role__type='Student').distinct().count()
+        supervisors_count = User.objects.filter(academicaffiliation__department=dept, userroles__role__type='Supervisor').distinct().count()
+        co_supervisors_count = User.objects.filter(academicaffiliation__department=dept, userroles__role__type='Co-supervisor').distinct().count()
+        groups_count = Group.objects.filter(department=dept).count()
+        projects_count = Project.objects.filter(groups__department=dept).distinct().count()
+        return Response({
+            "students": students_count,
+            "supervisors": supervisors_count,
+            "co_supervisors": co_supervisors_count,
+            "groups": groups_count,
+            "projects": projects_count,
+            "department_name": dept.name
+        })
+
 
 # till here
 
@@ -846,6 +932,37 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = User.objects.all()
+        
+        # دعم التصفية حسب الدور من الـ query params
+        role_type = self.request.query_params.get('role_type')
+
+        # إذا كان مدير نظام، يرى الجميع
+        if UserRoles.objects.filter(user=user, role__type='System Manager').exists():
+            if role_type:
+                qs = qs.filter(userroles__role__type=role_type)
+            return qs.distinct()
+
+        # إذا كان رئيس قسم، يرى مستخدمي قسمه فقط (طلاب، مشرفين، مشرفين مساعدين)
+        if UserRoles.objects.filter(user=user, role__type='Department Head').exists():
+            affiliation = AcademicAffiliation.objects.filter(user=user).first()
+            if affiliation and affiliation.department:
+                # حصر النتائج في القسم
+                qs = qs.filter(academicaffiliation__department=affiliation.department)
+                
+                # حصر الأدوار في (طالب، مشرف، مشرف مساعد) فقط لرئيس القسم
+                academic_roles = ['Student', 'Supervisor', 'Co-supervisor']
+                if role_type and role_type in academic_roles:
+                    qs = qs.filter(userroles__role__type=role_type)
+                else:
+                    qs = qs.filter(userroles__role__type__in=academic_roles)
+                
+                return qs.distinct()
+
+        return qs.filter(id=user.id)
 
     def create(self, request, *args, **kwargs):
         data = request.data
